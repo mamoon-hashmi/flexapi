@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+  <nav class="bg-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex justify-between items-center py-4">
+        <h1 class="text-2xl font-bold text-blue-600">MockAPI Pro</h1>
+        <div class="flex items-center space-x-4">
+          <span id="user-name" class="text-gray-700 font-medium">User</span>
+          <button onclick="realLogout()" class="bg-red-600 text-white px-6 py-3 rounded-lg">
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <div class="text-center mb-8">
+      <h2 class="text-3xl font-bold text-gray-800">Your Dashboard</h2>
+      <p class="text-gray-600">Create and manage mock APIs</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold">Projects</h3>
+        <p class="text-3xl font-bold text-blue-600" id="project-count">0</p>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold">API Calls</h3>
+        <p class="text-3xl font-bold text-green-600" id="api-count">0</p>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-semibold">Uptime</h3>
+        <p class="text-3xl font-bold text-purple-600">99.9%</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold">Your Projects</h3>
+        <button onclick="createProject()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">+ New Project</button>
+      </div>
+      <div id="projects-list" class="space-y-4">
+        <p class="text-gray-500 text-center py-8">No projects yet. Create one!</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- FREE PLAN LIMIT POPUP — SIRF YE ADD KIYA -->
+<div id="limit-popup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;justify-content:center;align-items:center;">
+  <div style="background:white;width:90%;max-width:420px;border-radius:16px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.3);">
+    <div style="background:#dc2626;padding:24px;text-align:center;color:white;">
+      <h3 style="margin:0;font-size:22px;font-weight:bold;">Free Plan Limit Reached</h3>
+    </div>
+    <div style="padding:32px;text-align:center;">
+      <p style="font-size:18px;margin:0 0 16px;">You can only create <strong>2 projects</strong> on free plan.</p>
+      <p style="color:#666;margin:0 0 28px;">Contact support to upgrade for unlimited projects.</p>
+      <button onclick="document.getElementById('limit-popup').style.display='none'" 
+              style="background:#4f46e5;color:white;padding:14px 40px;border:none;border-radius:12px;font-weight:bold;font-size:16px;cursor:pointer;">
+        OK, Got it
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('token');
+if (!token) window.location.href = '/login';
+localStorage.setItem('token', token);
+document.getElementById('user-name').textContent = new URLSearchParams(window.location.search).get('name') || 'User';
+
+// Yeh function ab sahi se error handle karega
+async function fetchAPI(endpoint, options = {}) {
+  const res = await fetch(endpoint, {
+    headers: { 
+      'Authorization': `Bearer ${token}`, 
+      'Content-Type': 'application/json' 
+    },
+    ...options
+  });
+
+  if (res.status === 401) {
+    localStorage.removeItem('token');
+    window.location.href = '/login';
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Network error' }));
+    throw err;
+  }
+  return res.json();
+}
+
+async function loadProjects() {
+  try {
+    const projects = await fetchAPI('/api/projects');
+    document.getElementById('project-count').textContent = projects.length;
+    const list = document.getElementById('projects-list');
+
+    if (projects.length === 0) {
+      list.innerHTML = '<p class="text-gray-500 text-center py-8">No projects yet. Create one!</p>';
+      return;
+    }
+
+    list.innerHTML = projects.map(p => `
+      <div class="border rounded p-4 bg-gray-50">
+        <h4 class="font-bold text-lg">${p.name}</h4>
+        <div class="mt-3">
+          <code class="block bg-black text-green-400 p-3 rounded font-mono text-sm break-all">
+            ${p.base_url.replace('https://mockapi-mamoon.live', 'http://localhost:5000/api/mock')}
+          </code>
+        </div>
+        <button onclick="deleteProject('${p._id}')" class="mt-3 text-red-600 hover:text-red-800 text-sm font-medium">
+          Delete Project
+        </button>
+      </div>
+    `).join('');
+
+  } catch (e) {
+    console.error('Load projects error:', e);
+  }
+}
+
+function createProject() {
+  const name = prompt('Project name:');
+  if (!name?.trim()) return;
+
+  fetchAPI('/api/projects', { 
+    method: 'POST', 
+    body: JSON.stringify({ name: name.trim() }) 
+  })
+  .then(() => {
+    loadProjects();
+    alert('Project created successfully!');
+  })
+  .catch(err => {
+    console.log('Create error:', err);
+    if (err.limit_reached === true) {
+      document.getElementById('limit-popup').style.display = 'flex';
+    } else {
+      alert('Error: ' + (err.error || err.message || 'Failed to create project'));
+    }
+  });
+}
+
+function deleteProject(id) {
+  if (confirm('Delete this project permanently?')) {
+    fetchAPI(`/api/projects/${id}`, { method: 'DELETE' })
+      .then(() => loadProjects());
+  }
+}
+
+function realLogout() {
+  const token = localStorage.getItem('token');
+  fetch('/api/auth/logout', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  }).finally(() => {
+    localStorage.clear();
+    window.location.href = '/login';
+  });
+}
+
+// Page load pe projects dikhao
+loadProjects();
+</script>
+{% endblock %}
