@@ -59,7 +59,7 @@ def register_routes(app, mongo, config):
         slug_with_id = f"{slug}-{unique_id}"
 
         # AB YE LINE HAMESHA DEFINE HOGI — KOI ERROR NAHI!
-        base_url = f"http://localhost:5000/api/mock/{slug_with_id}"
+        base_url = f"https://objexapi.vercel.app/api/mock/{slug_with_id}"
 
         project_doc = {
             'name': name,
