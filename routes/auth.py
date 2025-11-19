@@ -15,6 +15,8 @@ import jwt
 import uuid
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
 auth_bp = Blueprint('auth', __name__)
 
