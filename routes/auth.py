@@ -255,16 +255,115 @@ def register_routes(app, mongo, config):
         return jsonify({'message': 'Password updated successfully!'})
 
     # ==================== RESET PASSWORD PAGE (NO 500!) ====================
+    # YE SIRF YE ROUTE REPLACE KAR DO (baaki sab same rahega)
     @app.route('/reset-password')
     def reset_password_page():
         token = request.args.get('token')
         
-        # Token check (optional - better UX)
+        # Agar token invalid ya expired
         if not token or token not in password_resets:
-            return render_template('reset_password.html', token=None, error="Invalid or expired link!")
-        
-        return render_template('reset_password.html', token=token)
+            return '''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Invalid Link</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+            </head>
+            <body class="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl p-10 text-center max-w-md">
+                    <h1 class="text-4xl font-bold text-red-600 mb-4">Invalid Link</h1>
+                    <p class="text-gray-700 text-lg">This password reset link is invalid or has expired.</p>
+                    <a href="/login" class="mt-8 inline-block bg-red-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-red-700 transition">
+                        Back to Login
+                    </a>
+                </div>
+            </body>
+            </html>
+            ''', 400
 
+        # Valid token — pura working page with button
+        return f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Reset Password - MockAPI Pro</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md">
+                <div class="text-center mb-10">
+                    <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        MockAPI Pro
+                    </h1>
+                    <p class="text-gray-600 mt-3 text-lg">Set your new password</p>
+                </div>
+
+                <div class="space-y-6">
+                    <input type="password" id="newpass" placeholder="New Password" 
+                        class="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:border-purple-600 outline-none text-lg">
+                    <input type="password" id="confirm" placeholder="Confirm Password" 
+                        class="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:border-purple-600 outline-none text-lg">
+                    
+                    <button id="resetBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-2xl transition text-lg">
+                        Update Password
+                    </button>
+                </div>
+
+                <div class="mt-8 text-center">
+                    <a href="/login" class="text-purple-600 font-bold hover:underline">Back to Login</a>
+                </div>
+
+                <div id="toast" class="fixed bottom-6 right-6 px-8 py-4 rounded-xl text-white font-bold hidden z-50 shadow-2xl"></div>
+            </div>
+
+            <script>
+                const token = "{token}";
+                
+                function showToast(msg, success = true) {{
+                    const t = document.getElementById('toast');
+                    t.textContent = msg;
+                    t.className = `fixed bottom-6 right-6 px-8 py-4 rounded-xl text-white font-bold block z-50 shadow-2xl ${{success ? 'bg-green-600' : 'bg-red-600'}}`;
+                    setTimeout(() => t.classList.add('hidden'), 5000);
+                }}
+
+                document.getElementById('resetBtn').onclick = async () => {{
+                    const p1 = document.getElementById('newpass').value.trim();
+                    const p2 = document.getElementById('confirm').value.trim();
+                    const btn = document.getElementById('resetBtn');
+
+                    if (!p1 || !p2) return showToast("Fill both fields!", false);
+                    if (p1 !== p2) return showToast("Passwords don't match!", false);
+                    if (p1.length < 6) return showToast("Password too short!", false);
+
+                    btn.disabled = true;
+                    btn.textContent = "Updating...";
+
+                    try {{
+                        const res = await fetch('/api/auth/reset-password', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{ token, password: p1 }})
+                        }});
+                        const data = await res.json();
+
+                        if (data.message) {{
+                            showToast("Password updated! Redirecting...", true);
+                            setTimeout(() => location.href = '/login', 2000);
+                        }} else {{
+                            showToast(data.error || "Failed!", false);
+                        }}
+                    }} catch {{
+                        showToast("Network error!", false);
+                    }} finally {{
+                        btn.disabled = false;
+                        btn.textContent = "Update Password";
+                    }}
+                }};
+            </script>
+        </body>
+        </html>
+        '''
     # ==================== /me ENDPOINT ====================
     @auth_bp.route('/me', methods=['GET'])
     @secure_auth
