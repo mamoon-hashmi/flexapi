@@ -1,87 +1,58 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard - MockAPI Pro{% endblock %}
+{% block title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
   <nav class="bg-white shadow-lg">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex justify-between items-center py-4">
-        <h1 class="text-2xl font-bold text-blue-600">MockAPI Pro</h1>
-        <div class="flex items-center space-x-4">
-          <span id="user-name" class="text-gray-700 font-medium">Loading...</span>
-          <button onclick="realLogout()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition">
-            Logout
-          </button>
-        </div>
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-indigo-600">MockAPI Pro</h1>
+      <div class="flex items-center gap-4">
+        <span id="user-name" class="font-medium text-gray-700">Loading...</span>
+        <button onclick="realLogout()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition">
+          Logout
+        </button>
       </div>
     </div>
   </nav>
 
-  <main class="max-w-7xl mx-auto px-4 py-8">
-    <div class="text-center mb-8">
-      <h2 class="text-3xl font-bold text-gray-800">Your Dashboard</h2>
-      <p class="text-gray-600">Create and manage mock APIs</p>
-    </div>
+  <main class="max-w-7xl mx-auto px-4 py-10">
+    <h2 class="text-4xl font-bold text-center mb-10">Your Mock APIs</h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-      <div class="bg-white p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold">Projects</h3>
-        <p class="text-3xl font-bold text-blue-600" id="project-count">0</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div class="bg-white p-8 rounded-xl shadow text-center">
+        <h3 class="text-xl font-semibold">Projects</h3>
+        <p class="text-4xl font-bold text-blue-600 mt-2" id="project-count">0</p>
       </div>
-      <div class="bg-white p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold">API Calls</h3>
-        <p class="text-3xl font-bold text-green-600" id="api-count">0</p>
+      <div class="bg-white p-8 rounded-xl shadow text-center">
+        <h3 class="text-xl font-semibold">Total Endpoints</h3>
+        <p class="text-4xl font-bold text-green-600 mt-2" id="endpoint-count">0</p>
       </div>
-      <div class="bg-white p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold">Uptime</h3>
-        <p class="text-3xl font-bold text-purple-600">99.9%</p>
+      <div class="bg-white p-8 rounded-xl shadow text-center">
+        <h3 class="text-xl font-semibold">Plan</h3>
+        <p class="text-4xl font-bold text-indigo-600 mt-2">Free</p>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-6">
+    <div class="bg-white rounded-2xl shadow-lg p-8">
       <div class="flex justify-between items-center mb-6">
-        <h3 class="text-xl font-bold">Your Projects</h3>
-        <button onclick="createProject()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition">
+        <h3 class="text-2xl font-bold">Your Projects</h3>
+        <button onclick="createProject()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-bold transition">
           + New Project
         </button>
       </div>
-      <div id="projects-list" class="space-y-4">
-        <p class="text-gray-500 text-center py-8">Loading projects...</p>
+      <div id="projects-list" class="space-y-6">
+        <p class="text-center text-gray-500 py-12">Loading your projects...</p>
       </div>
     </div>
   </main>
 </div>
 
-<!-- FREE PLAN LIMIT POPUP -->
-<div id="limit-popup" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-    <div class="bg-red-600 text-white text-center py-6">
-      <h3 class="text-2xl font-bold">Free Plan Limit Reached</h3>
-    </div>
-    <div class="p-8 text-center">
-      <p class="text-lg mb-4">You can only create <strong>2 projects</strong> on the free plan.</p>
-      <p class="text-gray-600 mb-8">Upgrade to Pro for unlimited projects!</p>
-      <button onclick="document.getElementById('limit-popup').classList.add('hidden')" 
-              class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl transition">
-        Got it
-      </button>
-    </div>
-  </div>
-</div>
-
 <script>
-// === TOKEN & AUTH PROTECTION ===
 const token = localStorage.getItem('token');
-if (!token) {
-  window.location.replace('/login');
-  throw new Error("No token"); // Stop script execution
-}
+if (!token) window.location.replace('/login');
 
-// Set user name
-document.getElementById('user-name').textContent = localStorage.getItem('userName') || 'User';
-
-// === SECURE API CALL FUNCTION ===
-async function apiCall(endpoint, options = {}) {
+// Secure API call
+async function api(endpoint, options = {}) {
   const res = await fetch(endpoint, {
     ...options,
     headers: {
@@ -90,102 +61,87 @@ async function apiCall(endpoint, options = {}) {
       ...options.headers
     }
   });
-
   if (res.status === 401) {
     localStorage.clear();
-    showToast("Session expired. Please login again.", "error");
+    showToast("Session expired", "error");
     setTimeout(() => window.location.replace('/login'), 1500);
     return;
   }
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: "Server error" }));
-    throw err;
-  }
-  return await res.json();
+  if (!res.ok) throw await res.json().catch(() => ({error: "Server error"}));
+  return res.json();
 }
 
-// === LOAD PROJECTS ===
+// Load user
+api('/api/auth/me').then(u => {
+  document.getElementById('user-name').textContent = u.name;
+  localStorage.setItem('userName', u.name);
+}).catch(() => {});
+
+// Load projects
 async function loadProjects() {
   try {
-    const projects = await apiCall('/api/projects');
+    const projects = await api('/api/projects');
     document.getElementById('project-count').textContent = projects.length;
-
     const list = document.getElementById('projects-list');
     if (projects.length === 0) {
-      list.innerHTML = '<p class="text-gray-500 text-center py-12">No projects yet. Create your first one!</p>';
+      list.innerHTML = `<p class="text-center text-gray-500 py-16 text-xl">No projects yet. Create your first one!</p>`;
       return;
     }
-
     list.innerHTML = projects.map(p => `
-      <div class="border-2 border-gray-200 rounded-xl p-6 hover:border-indigo-400 transition bg-gradient-to-r from-gray-50 to-white">
-        <h4 class="text-xl font-bold text-gray-800 mb-2">${p.name}</h4>
-        <div class="bg-black text-green-400 p-4 rounded-lg font-mono text-sm break-all mt-3">
+      <div class="border-2 border-gray-200 rounded-xl p-6 hover:border-indigo-500 transition-all bg-gradient-to-r from-indigo-50">
+        <h4 class="text-2xl font-bold mb-3">${p.name}</h4>
+        <code class="block bg-black text-green-400 p-4 rounded font-mono text-sm break-all mb-4">
           ${p.base_url}
-        </div>
-        <div class="mt-4 flex gap-3">
-          <a href="/project/${p._id}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition">
+        </code>
+        <div class="flex gap-4">
+          <a href="/project/${p._id}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-bold">
             Open Editor
           </a>
-          <button onclick="deleteProject('${p._id}')" class="text-red-600 hover:text-red-800 font-medium text-sm">
+          <button onclick="deleteProject('${p._id}')" class="text-red-600 hover:text-red-800 font-bold">
             Delete
           </button>
         </div>
       </div>
     `).join('');
-
-  } catch (err) {
-    console.error("Load projects failed:", err);
-    showToast(err.error || "Failed to load projects", "error");
+  } catch (e) {
+    showToast(e.error || "Failed to load", "error");
   }
 }
 
-// === CREATE PROJECT ===
 async function createProject() {
-  const name = prompt("Enter project name:");
+  const name = prompt("Project Name:");
   if (!name?.trim()) return;
-
   try {
-    await apiCall('/api/projects', {
-      method: 'POST',
-      body: JSON.stringify({ name: name.trim() })
-    });
-    showToast("Project created successfully!", "success");
+    await api('/api/projects', {method: 'POST', body: JSON.stringify({name: name.trim()})});
+    showToast("Project created!", "success");
     loadProjects();
-  } catch (err) {
-    if (err.limit_reached) {
-      document.getElementById('limit-popup').classList.remove('hidden');
+  } catch (e) {
+    if (e.limit_reached) {
+      alert("Free plan limit: 2 projects only!");
     } else {
-      showToast(err.error || "Failed to create project", "error");
+      showToast(e.error || "Failed", "error");
     }
   }
 }
 
-// === DELETE PROJECT ===
 async function deleteProject(id) {
-  if (!confirm("Delete this project permanently?")) return;
-  try {
-    await apiCall(`/api/projects/${id}`, { method: 'DELETE' });
-    showToast("Project deleted", "success");
-    loadProjects();
-  } catch (err) {
-    showToast("Failed to delete", "error");
-  }
+  if (!confirm("Delete permanently?")) return;
+  await api(`/api/projects/${id}`, {method: 'DELETE'});
+  showToast("Deleted!", "success");
+  loadProjects();
 }
 
-// === LOGOUT ===
 function realLogout() {
   fetch('/api/auth/logout', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: {'Authorization': `Bearer ${token}`}
   }).finally(() => {
     localStorage.clear();
-    showToast("Logged out successfully", "success");
+    showToast("Logged out", "success");
     setTimeout(() => window.location.replace('/login'), 800);
   });
 }
 
-// === AUTO LOAD ON START ===
 loadProjects();
 </script>
 {% endblock %}
