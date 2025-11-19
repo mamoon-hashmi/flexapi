@@ -258,8 +258,11 @@ def register_routes(app, mongo, config):
     @app.route('/reset-password')
     def reset_password_page():
         token = request.args.get('token')
+        
+        # Token check (optional - better UX)
         if not token or token not in password_resets:
             return render_template('reset_password.html', token=None, error="Invalid or expired link!")
+        
         return render_template('reset_password.html', token=token)
 
     # ==================== /me ENDPOINT ====================
