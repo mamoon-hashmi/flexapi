@@ -1,5 +1,5 @@
-# routes/auth.py → 100% FINAL, COMPLETE & WORKING (NO ERROR EVER!)
-from flask import Blueprint, request, jsonify, redirect, session, current_app, render_template
+# routes/auth.py → 100% COMPLETE, FINAL & WORKING (Vercel + Google + Reset Password)
+from flask import Blueprint, request, jsonify, redirect, current_app
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 import random
@@ -16,14 +16,14 @@ import uuid
 
 auth_bp = Blueprint('auth', __name__)
 
-# Google OAuth — sirf .env se chalega (NO JSON FILE!)
+# Google OAuth from ENV only (NO JSON FILE!)
 def get_google_flow():
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5000/api/auth/google/callback")
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")  # https://yoursite.vercel.app/api/auth/google/callback
 
     if not all([client_id, client_secret, redirect_uri]):
-        print("Google OAuth env vars missing!")
+        print("GOOGLE OAUTH ENV VARS MISSING!")
         return None
 
     return Flow.from_client_config(
@@ -64,9 +64,8 @@ def send_email(to_email, subject, html_body):
 
 def register_routes(app, mongo, config):
     users = mongo.db.users
-    app.blacklisted_tokens = set()  # Logout ke liye
+    app.blacklisted_tokens = set()
 
-    # Secure Auth Decorator
     def secure_auth(f):
         @wraps(f)
         def decorated(*args, **kwargs):
@@ -81,14 +80,13 @@ def register_routes(app, mongo, config):
                 return jsonify({'error': 'Invalid token'}), 401
         return decorated
 
-    # ==================== GOOGLE LOGIN ====================
+    # GOOGLE LOGIN (NO SESSION → VERCEL SAFE!)
     @auth_bp.route('/google')
     def google_login():
         flow = get_google_flow()
         if not flow:
             return "Google OAuth not configured", 500
-        auth_url, state = flow.authorization_url(prompt='consent')
-        session['state'] = state
+        auth_url, _ = flow.authorization_url(prompt='consent')
         return redirect(auth_url)
 
     @auth_bp.route('/google/callback')
@@ -124,9 +122,9 @@ def register_routes(app, mongo, config):
             """
         except Exception as e:
             print("Google Error:", e)
-            return redirect('/login')
+            return redirect('/login?error=google')
 
-    # ==================== REGISTER + OTP ====================
+    # REGISTER + OTP
     @auth_bp.route('/register', methods=['POST'])
     def register():
         data = request.get_json() or {}
@@ -137,16 +135,16 @@ def register_routes(app, mongo, config):
         if not all([email, name, password]) or len(password) < 6:
             return jsonify({'error': 'Invalid data'}), 400
         if users.find_one({'email': email}):
-            return jsonify({'error': 'Email already exists'}), 400
+            return jsonify({'error': 'Email exists'}), 400
 
         otp = random.randint(100000, 999999)
         pending_registrations[email] = {
             'name': name, 'password': password, 'otp': otp, 'time': datetime.utcnow()
         }
 
-        if send_email(email, "MockAPI Pro - Your OTP", f"<h2>Your OTP: <b>{otp}</b></h2><p>Valid for 5 minutes</p>"):
-            return jsonify({'message': 'OTP sent!'})
-        return jsonify({'error': 'Failed to send OTP'}), 500
+        if send_email(email, "MockAPI Pro - OTP", f"<h2>OTP: <b>{otp}</b></h2>"):
+            return jsonify({'message': 'OTP sent'})
+        return jsonify({'error': 'Email failed'}), 500
 
     @auth_bp.route('/verify-registration', methods=['POST'])
     def verify_otp():
@@ -159,7 +157,7 @@ def register_routes(app, mongo, config):
             pending_registrations.pop(email, None)
             return jsonify({'error': 'OTP expired'}), 400
         if str(reg['otp']) != str(otp):
-            return jsonify({'error': 'Invalid OTP'}), 400
+            return jsonify({'error': 'Wrong OTP'}), 400
 
         user_id = users.insert_one({
             'email': email, 'name': reg['name'],
@@ -172,7 +170,7 @@ def register_routes(app, mongo, config):
         pending_registrations.pop(email, None)
         return jsonify({'token': token})
 
-    # ==================== LOGIN ====================
+    # LOGIN
     @auth_bp.route('/login', methods=['POST'])
     def login():
         data = request.get_json() or {}
@@ -185,7 +183,7 @@ def register_routes(app, mongo, config):
             return jsonify({'token': token})
         return jsonify({'error': 'Invalid credentials'}), 401
 
-    # ==================== LOGOUT ====================
+    # LOGOUT
     @auth_bp.route('/logout', methods=['POST'])
     @secure_auth
     def logout():
@@ -194,7 +192,7 @@ def register_routes(app, mongo, config):
             app.blacklisted_tokens.add(token)
         return jsonify({'message': 'Logged out'})
 
-    # ==================== FORGOT PASSWORD ====================
+    # FORGOT PASSWORD
     @auth_bp.route('/forgot-password', methods=['POST'])
     def forgot_password():
         data = request.get_json() or {}
@@ -218,19 +216,19 @@ def register_routes(app, mongo, config):
         html = f"""
         <div style="font-family:Arial;text-align:center;padding:40px;background:#f8fafc;">
           <h1 style="color:#6366f1">MockAPI Pro</h1>
-          <h2>Password Reset Request</h2>
+          <h2>Password Reset</h2>
           <a href="{reset_link}" style="background:#4f46e5;color:white;padding:16px 36px;border-radius:12px;text-decoration:none;font-weight:bold;">
             Reset Password Now
           </a>
-          <p style="margin-top:20px;color:#666;">This link expires in 1 hour.</p>
+          <p style="margin-top:20px;color:#666;">Link expires in 1 hour.</p>
         </div>
         """
 
-        if send_email(email, "Reset Your MockAPI Pro Password", html):
+        if send_email(email, "Reset Your Password", html):
             return jsonify({'message': 'Reset link sent!'})
-        return jsonify({'error': 'Failed to send email'}), 500
+        return jsonify({'error': 'Email failed'}), 500
 
-    # ==================== RESET PASSWORD API ====================
+    # RESET PASSWORD API
     @auth_bp.route('/reset-password', methods=['POST'])
     def reset_password():
         data = request.get_json() or {}
@@ -238,7 +236,7 @@ def register_routes(app, mongo, config):
         password = data.get('password')
 
         if not token or token not in password_resets:
-            return jsonify({'error': 'Invalid or expired token'}), 400
+            return jsonify({'error': 'Invalid token'}), 400
         if len(password) < 6:
             return jsonify({'error': 'Password too short'}), 400
 
@@ -254,117 +252,63 @@ def register_routes(app, mongo, config):
         del password_resets[token]
         return jsonify({'message': 'Password updated successfully!'})
 
-    # ==================== RESET PASSWORD PAGE (NO 500!) ====================
-    # YE SIRF YE ROUTE REPLACE KAR DO (baaki sab same rahega)
+    # RESET PASSWORD PAGE — PURA HTML ANDAR HI HAI (NO TEMPLATE NEEDED!)
     @app.route('/reset-password')
     def reset_password_page():
         token = request.args.get('token')
-        
-        # Agar token invalid ya expired
         if not token or token not in password_resets:
             return '''
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Invalid Link</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-            </head>
-            <body class="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl shadow-2xl p-10 text-center max-w-md">
-                    <h1 class="text-4xl font-bold text-red-600 mb-4">Invalid Link</h1>
-                    <p class="text-gray-700 text-lg">This password reset link is invalid or has expired.</p>
-                    <a href="/login" class="mt-8 inline-block bg-red-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-red-700 transition">
-                        Back to Login
-                    </a>
+            <!DOCTYPE html><html><head><title>Invalid Link</title><script src="https://cdn.tailwindcss.com"></script></head>
+            <body class="min-h-screen bg-red-50 flex items-center justify-center">
+                <div class="bg-white p-10 rounded-2xl shadow-2xl text-center">
+                    <h1 class="text-4xl font-bold text-red-600">Invalid Link</h1>
+                    <p class="mt-4 text-gray-700">This reset link is invalid or expired.</p>
+                    <a href="/login" class="mt-6 inline-block bg-red-600 text-white px-8 py-4 rounded-xl font-bold">Back to Login</a>
                 </div>
-            </body>
-            </html>
+            </body></html>
             ''', 400
 
-        # Valid token — pura working page with button
         return f'''
         <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Reset Password - MockAPI Pro</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <script src="https://cdn.tailwindcss.com"></script>
-        </head>
+        <html><head><title>Reset Password</title><meta name="viewport" content="width=device-width,initial-scale=1">
+        <script src="https://cdn.tailwindcss.com"></script></head>
         <body class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md">
-                <div class="text-center mb-10">
-                    <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        MockAPI Pro
-                    </h1>
-                    <p class="text-gray-600 mt-3 text-lg">Set your new password</p>
-                </div>
-
-                <div class="space-y-6">
-                    <input type="password" id="newpass" placeholder="New Password" 
-                        class="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:border-purple-600 outline-none text-lg">
-                    <input type="password" id="confirm" placeholder="Confirm Password" 
-                        class="w-full px-5 py-4 border-2 border-gray-200 rounded-xl focus:border-purple-600 outline-none text-lg">
-                    
-                    <button id="resetBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-2xl transition text-lg">
-                        Update Password
-                    </button>
-                </div>
-
-                <div class="mt-8 text-center">
-                    <a href="/login" class="text-purple-600 font-bold hover:underline">Back to Login</a>
-                </div>
-
-                <div id="toast" class="fixed bottom-6 right-6 px-8 py-4 rounded-xl text-white font-bold hidden z-50 shadow-2xl"></div>
+                <h1 class="text-4xl font-bold text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-8">MockAPI Pro</h1>
+                <input type="password" id="newpass" placeholder="New Password" class="w-full px-5 py-4 border-2 rounded-xl mb-4 focus:border-purple-600 outline-none">
+                <input type="password" id="confirm" placeholder="Confirm Password" class="w-full px-5 py-4 border-2 rounded-xl mb-6 focus:border-purple-600 outline-none">
+                <button id="resetBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-lg">Update Password</button>
+                <div class="text-center mt-6"><a href="/login" class="text-purple-600 font-bold">Back to Login</a></div>
+                <div id="toast" class="fixed bottom-6 right-6 px-8 py-4 rounded-xl text-white font-bold hidden z-50"></div>
             </div>
-
             <script>
                 const token = "{token}";
-                
-                function showToast(msg, success = true) {{
-                    const t = document.getElementById('toast');
-                    t.textContent = msg;
-                    t.className = `fixed bottom-6 right-6 px-8 py-4 rounded-xl text-white font-bold block z-50 shadow-2xl ${{success ? 'bg-green-600' : 'bg-red-600'}}`;
-                    setTimeout(() => t.classList.add('hidden'), 5000);
+                function toast(msg, ok=true){{ 
+                    const t=document.getElementById('toast'); 
+                    t.textContent=msg; 
+                    t.className='fixed bottom-6 right-6 px-8 py-4 rounded-xl text-white font-bold block z-50 '+(ok?'bg-green-600':'bg-red-600'); 
+                    setTimeout(()=>t.classList.add('hidden'),5000); 
                 }}
-
-                document.getElementById('resetBtn').onclick = async () => {{
-                    const p1 = document.getElementById('newpass').value.trim();
-                    const p2 = document.getElementById('confirm').value.trim();
-                    const btn = document.getElementById('resetBtn');
-
-                    if (!p1 || !p2) return showToast("Fill both fields!", false);
-                    if (p1 !== p2) return showToast("Passwords don't match!", false);
-                    if (p1.length < 6) return showToast("Password too short!", false);
-
-                    btn.disabled = true;
-                    btn.textContent = "Updating...";
-
-                    try {{
-                        const res = await fetch('/api/auth/reset-password', {{
-                            method: 'POST',
-                            headers: {{ 'Content-Type': 'application/json' }},
-                            body: JSON.stringify({{ token, password: p1 }})
-                        }});
-                        const data = await res.json();
-
-                        if (data.message) {{
-                            showToast("Password updated! Redirecting...", true);
-                            setTimeout(() => location.href = '/login', 2000);
-                        }} else {{
-                            showToast(data.error || "Failed!", false);
-                        }}
-                    }} catch {{
-                        showToast("Network error!", false);
-                    }} finally {{
-                        btn.disabled = false;
-                        btn.textContent = "Update Password";
-                    }}
+                document.getElementById('resetBtn').onclick=async()=>{{
+                    const p1=document.getElementById('newpass').value;
+                    const p2=document.getElementById('confirm').value;
+                    if(p1!==p2)return toast("Passwords don't match!",false);
+                    if(p1.length<6)return toast("Password too short!",false);
+                    const btn=document.getElementById('resetBtn'); 
+                    btn.disabled=true; btn.textContent="Updating...";
+                    try{{ 
+                        const r=await fetch('/api/auth/reset-password',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{token,password:p1}})}});
+                        const d=await r.json(); 
+                        if(d.message){{toast("Password updated!",true);setTimeout(()=>location.href='/login',2000);}}
+                        else{{toast(d.error||"Failed",false);}}
+                    }}catch{{toast("Network error!",false);}}
+                    finally{{btn.disabled=false;btn.textContent="Update Password";}}
                 }};
             </script>
-        </body>
-        </html>
+        </body></html>
         '''
-    # ==================== /me ENDPOINT ====================
+
+    # /me ENDPOINT
     @auth_bp.route('/me', methods=['GET'])
     @secure_auth
     def me():
@@ -377,6 +321,6 @@ def register_routes(app, mongo, config):
             'plan': user.get('plan', 'free')
         })
 
-    # ==================== FINAL REGISTER ====================
+    # FINAL REGISTER
     app.secure_auth = secure_auth
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
