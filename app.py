@@ -10,13 +10,17 @@ import routes.resources
 import routes.mock
 import routes.openapi
 
-app = Flask(__name__)
+from flask import Flask
+app = Flask(__name__, template_folder='templates')  # YE LINE HONA CHAHIYE!
 app.config.from_object(Config)
 mongo = PyMongo(app)
 
 if mongo.db is None:
     print("MongoDB connection failed!")
     exit(1)
+    
+from flask import Flask
+app = Flask(__name__, template_folder='templates')  # YE LINE HONA CHAHIYE!
 
 CORS(app)
 app.url_map.strict_slashes = False
