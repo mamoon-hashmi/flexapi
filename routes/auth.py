@@ -1,5 +1,5 @@
-# routes/auth.py — FINAL 100% WORKING VERSION (LOGIN FIXED + FORGOT PASSWORD + RESET)
-from flask import Blueprint, request, jsonify, redirect, session, current_app, url_for
+# routes/auth.py → FINAL VERCEL + PRODUCTION READY (NO JSON FILE!)
+from flask import Blueprint, request, jsonify, redirect, session, current_app
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 import random
@@ -11,23 +11,45 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from functools import wraps
 import os
-import jwt
 import uuid
-
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
-CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
 auth_bp = Blueprint('auth', __name__)
 
-# Google OAuth
-flow = Flow.from_client_secrets_file(
-    'client_secrets.json',
-    scopes=['https://www.googleapis.com/auth/userinfo.email',
-            'https://www.googleapis.com/auth/userinfo.profile', 'openid'],
-    redirect_uri='http://localhost:5000/api/auth/google/callback'
-)
+# Global flow - lazy loaded
+_google_flow = None
 
+def get_google_flow():
+    """Create Google OAuth flow using only environment variables"""
+    global _google_flow
+    if _google_flow is None:
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+        redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+
+        if not all([client_id, client_secret, redirect_uri]):
+            print("Google OAuth env vars missing!")
+            return None
+
+        _google_flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [redirect_uri]
+                }
+            },
+            scopes=[
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "openid"
+            ],
+            redirect_uri=redirect_uri
+        )
+    return _google_flow
+
+# In-memory storage (for demo, use Redis in real app)
 pending_registrations = {}
 password_resets = {}
 
@@ -42,7 +64,7 @@ def send_email(to_email, subject, html_body):
             server.sendmail(Config.SMTP_EMAIL, to_email, msg.as_string())
         return True
     except Exception as e:
-        print("Email Error:", e)
+        print("SMTP Error:", e)
         return False
 
 def secure_auth(f):
@@ -50,13 +72,13 @@ def secure_auth(f):
     def decorated(*args, **kwargs):
         token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
         app = current_app._get_current_object()
-        if token in app.blacklisted_tokens:
-            return jsonify({'error': 'Session expired'}), 401
+        if token in getattr(app, 'blacklisted_tokens', set()):
+            return jsonify({'error': 'Token revoked'}), 401
         try:
             payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
             request.user_id = str(payload['user_id'])
         except:
-            return jsonify({'error': 'Invalid or expired token'}), 401
+            return jsonify({'error': 'Invalid token'}), 401
         return f(*args, **kwargs)
     return decorated
 
@@ -64,103 +86,120 @@ def register_routes(app, mongo, config):
     users = mongo.db.users
     app.blacklisted_tokens = set()
 
-    # ==================== GOOGLE LOGIN (same as before) ====================
+    # ===================== GOOGLE OAUTH =====================
     @auth_bp.route('/google')
     def google_login():
+        flow = get_google_flow()
+        if not flow:
+            return "Google OAuth not configured", 500
+
         if request.args.get('from_register') == '1':
             session['from_register'] = True
-        else:
-            session.pop('from_register', None)
-        auth_url, state = flow.authorization_url(prompt='consent')
+
+        auth_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
         session['state'] = state
         return redirect(auth_url)
 
     @auth_bp.route('/google/callback')
     def google_callback():
+        flow = get_google_flow()
+        if not flow:
+            return redirect('/login?error=oauth')
+
         try:
             flow.fetch_token(authorization_response=request.url)
             credentials = flow.credentials
             service = build('oauth2', 'v2', credentials=credentials)
             info = service.userinfo().get().execute()
+
             email = info['email'].lower()
+            name = info.get('name', email.split('@')[0])
 
             user = users.find_one({'email': email})
+
             if user:
-                if session.get('from_register'):
-                    session.pop('from_register', None)
-                    session['flash_message'] = 'You already have an account!'
-                    return redirect('/login')
+                if session.pop('from_register', None):
+                    return redirect('/login?flash=You already have an account!')
                 token = generate_jwt(str(user['_id']), config.SECRET_KEY)
-                return f"""
-                <script>
-                    localStorage.setItem('token', '{token}');
-                    localStorage.setItem('userName', '{info.get('name', 'User')}');
-                    location.href = '/dashboard';
-                </script>
-                """
             else:
-                user_id = users.insert_one({
+                result = users.insert_one({
                     'email': email,
-                    'name': info.get('name', 'User'),
+                    'name': name,
                     'email_verified': True,
                     'created_at': datetime.utcnow(),
                     'google_auth': True,
                     'plan': 'free',
                     'max_projects': 2,
                     'current_projects': 0
-                }).inserted_id
-                token = generate_jwt(str(user_id), config.SECRET_KEY)
-                return f"""
-                <script>
-                    localStorage.setItem('token', '{token}');
-                    localStorage.setItem('userName', '{info.get('name', 'User')}');
-                    alert('Account created with Google!');
-                    location.href = '/dashboard';
-                </script>
-                """
-        except Exception as e:
-            print("Google Error:", e)
-            return redirect('/login')
+                })
+                token = generate_jwt(str(result.inserted_id), config.SECRET_KEY)
 
-    # ==================== REGISTER & VERIFY (same) ====================
+            return f"""
+            <script>
+                localStorage.setItem('token', '{token}');
+                localStorage.setItem('userName', '{name}');
+                location.href = '/dashboard';
+            </script>
+            """
+        except Exception as e:
+            print("Google OAuth Error:", e)
+            return redirect('/login?error=google_failed')
+
+    # ===================== REGISTER + OTP =====================
     @auth_bp.route('/register', methods=['POST'])
-    def register_step1():
-        data = request.json
+    def register():
+        data = request.get_json() or {}
         email = data.get('email', '').lower().strip()
         name = data.get('name', '').strip()
         password = data.get('password', '')
 
-        if not all([email, name, password]):
-            return jsonify({'error': 'All fields required'}), 400
+        if not all([email, name, password]) or len(password) < 6:
+            return jsonify({'error': 'Invalid data'}), 400
         if users.find_one({'email': email}):
             return jsonify({'error': 'Email already exists'}), 400
 
         otp = random.randint(100000, 999999)
         pending_registrations[email] = {
-            'name': name, 'password': password, 'otp': otp, 'time': datetime.utcnow()
+            'name': name,
+            'password': password,
+            'otp': otp,
+            'time': datetime.utcnow()
         }
 
-        if send_email(email, "Your OTP - MockAPI Pro", f"<h2>Your OTP is: <b>{otp}</b></h2><p>Valid for 5 minutes.</p>"):
+        html = f"""
+        <div style="font-family:Arial;text-align:center;padding:40px;background:#f8fafc;">
+          <h1 style="color:#6366f1">MockAPI Pro</h1>
+          <h2>Verify Your Email</h2>
+          <p style="font-size:36px;letter-spacing:8px;color:#1d4ed8"><b>{otp}</b></p>
+          <p>Valid for 5 minutes</p>
+        </div>
+        """
+
+        if send_email(email, "Your MockAPI Pro OTP", html):
             return jsonify({'message': 'OTP sent!'})
         return jsonify({'error': 'Failed to send OTP'}), 500
 
     @auth_bp.route('/verify-registration', methods=['POST'])
     def verify_otp():
-        data = request.json
-        email = data.get('email', '').lower().strip()
-        otp = data.get('otp')
-        reg = pending_registrations.get(email)
+        data = request.get_json() or {}
+        email = data.get('email', '').lower()
+        otp = data.get('otp', '')
 
+        reg = pending_registrations.get(email)
         if not reg or (datetime.utcnow() - reg['time']) > timedelta(minutes=5):
-            if email in pending_registrations: del pending_registrations[email]
-            return jsonify({'error': 'OTP expired!'}), 400
+            pending_registrations.pop(email, None)
+            return jsonify({'error': 'OTP expired'}), 400
         if str(reg['otp']) != str(otp):
-            return jsonify({'error': 'Invalid OTP!'}), 400
+            return jsonify({'error': 'Invalid OTP'}), 400
 
         user_id = users.insert_one({
             'email': email,
-            'password_hash': hash_password(reg['password']),
             'name': reg['name'],
+            'password_hash': hash_password(reg['password']),
             'email_verified': True,
             'created_at': datetime.utcnow(),
             'plan': 'free',
@@ -168,41 +207,36 @@ def register_routes(app, mongo, config):
             'current_projects': 0
         }).inserted_id
 
-        del pending_registrations[email]
+        pending_registrations.pop(email, None)
         token = generate_jwt(str(user_id), config.SECRET_KEY)
         return jsonify({'token': token})
 
-    # ==================== LOGIN — AB 100% WORKING ====================
+    # ===================== LOGIN =====================
     @auth_bp.route('/login', methods=['POST'])
     def login():
-        data = request.json
+        data = request.get_json() or {}
         email = data.get('email', '').lower().strip()
         password = data.get('password', '')
-
-        if not email or not password:
-            return jsonify({'error': 'Email and password required'}), 400
 
         user = users.find_one({'email': email})
         if user and check_password(user.get('password_hash'), password):
             token = generate_jwt(str(user['_id']), config.SECRET_KEY)
-            return jsonify({
-                'token': token,
-                'message': 'Login successful'
-            })
+            return jsonify({'token': token})
         return jsonify({'error': 'Invalid email or password'}), 401
 
-    # ==================== LOGOUT ====================
+    # ===================== LOGOUT =====================
     @auth_bp.route('/logout', methods=['POST'])
+    @secure_auth
     def logout():
         token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
         if token:
             app.blacklisted_tokens.add(token)
-        return jsonify({'message': 'Logged out successfully'})
+        return jsonify({'message': 'Logged out'})
 
-    # ==================== FORGOT PASSWORD ====================
+    # ===================== FORGOT PASSWORD =====================
     @auth_bp.route('/forgot-password', methods=['POST'])
     def forgot_password():
-        data = request.json
+        data = request.get_json() or {}
         email = data.get('email', '').lower().strip()
         if not email:
             return jsonify({'error': 'Email required'}), 400
@@ -211,65 +245,35 @@ def register_routes(app, mongo, config):
         if not user:
             return jsonify({'message': 'If email exists, reset link sent!'})
 
-        reset_token = str(uuid.uuid4())
-        password_resets[reset_token] = {
+        token = str(uuid.uuid4())
+        password_resets[token] = {
             'email': email,
             'expires_at': datetime.utcnow() + timedelta(hours=1)
         }
 
-        reset_link = f"http://localhost:5000/reset-password?token={reset_token}"
+        reset_link = f"{request.url_root[:-1]}reset-password?token={token}"
         html = f"""
-        <h2>Reset Your Password</h2>
-        <p>Click below to reset:</p>
-        <a href="{reset_link}" style="padding:10px 20px;background:#4f46e5;color:white;border-radius:8px;text-decoration:none;">
+        <div style="font-family:Arial;text-align:center;padding:40px;background:#f8fafc;">
+          <h1 style="color:#6366f1">MockAPI Pro</h1>
+          <h2>Password Reset</h2>
+          <a href="{reset_link}" style="padding:14px 32px;background:#4f46e5;color:white;border-radius:8px;text-decoration:none;">
             Reset Password
-        </a>
-        <p>Link expires in 1 hour.</p>
+          </a>
+          <p>Link expires in 1 hour</p>
+        </div>
         """
 
-        if send_email(email, "Password Reset - MockAPI Pro", html):
-            return jsonify({'message': 'Password reset link sent!'})
-        return jsonify({'error': 'Failed to send email'}), 500
+        if send_email(email, "Reset Your Password", html):
+            return jsonify({'message': 'Reset link sent!'})
+        return jsonify({'error': 'Email failed'}), 500
 
-    # ==================== RESET PASSWORD PAGE & ENDPOINT ====================
-    @app.route('/reset-password')
-    def reset_page():
-        token = request.args.get('token')
-        if not token or token not in password_resets:
-            return "<h3>Invalid or expired link!</h3>"
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head><script src="https://cdn.tailwindcss.com"></script></head>
-        <body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen flex items-center justify-center">
-            <div class="bg-white p-8 rounded-xl shadow-2xl w-96">
-                <h2 class="text-2xl font-bold text-center mb-6">Set New Password</h2>
-                <input type="password" id="pass" placeholder="New Password" class="w-full p-3 border rounded-lg mb-4">
-                <input type="password" id="confirm" placeholder="Confirm Password" class="w-full p-3 border rounded-lg mb-6">
-                <button onclick="reset()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold">Update</button>
-                <p id="msg" class="text-center mt-4"></p>
-            </div>
-            <script>
-                async function reset() {{
-                    const p1 = document.getElementById('pass').value;
-                    const p2 = document.getElementById('confirm').value;
-                    if (p1 !== p2) return document.getElementById('msg').innerHTML = "Passwords don't match!";
-                    if (p1.length < 6) return document.getElementById('msg').innerHTML = "Too short!";
-                    const res = await fetch('/api/auth/reset-password', {{ method: 'POST', headers: {{'Content-Type':'application/json'}}, body: JSON.stringify({{token: '{token}', password: p1}}) }});
-                    const d = await res.json();
-                    document.getElementById('msg').innerHTML = d.message ? "<span style='color:green'>"+d.message+"</span>" : "<span style='color:red'>"+(d.error||"Error")+"</span>";
-                    if (d.message) setTimeout(()=>location.href='/login',2000);
-                }}
-            </script>
-        </body>
-        </html>
-        """
-
+    # ===================== RESET PASSWORD =====================
     @auth_bp.route('/reset-password', methods=['POST'])
     def reset_password():
-        data = request.json
+        data = request.get_json() or {}
         token = data.get('token')
         password = data.get('password')
+
         if not token or token not in password_resets:
             return jsonify({'error': 'Invalid token'}), 400
         if len(password) < 6:
@@ -277,16 +281,16 @@ def register_routes(app, mongo, config):
 
         info = password_resets[token]
         if datetime.utcnow() > info['expires_at']:
-            del password_resets[token]
+            password_resets.pop(token, None)
             return jsonify({'error': 'Token expired'}), 400
 
         users.update_one(
             {'email': info['email']},
             {'$set': {'password_hash': hash_password(password)}}
         )
-        del password_resets[token]
-        return jsonify({'message': 'Password updated! Redirecting...'})
+        password_resets.pop(token, None)
+        return jsonify({'message': 'Password updated!'})
 
-    # ==================== FINAL SETUP ====================
+    # Register blueprint
     app.secure_auth = secure_auth
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
