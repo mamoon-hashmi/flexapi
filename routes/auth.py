@@ -142,7 +142,7 @@ def register_routes(app, mongo, config):
             'name': name, 'password': password, 'otp': otp, 'time': datetime.utcnow()
         }
 
-        if send_email(email, "MockAPI Pro - OTP", f"<h2>OTP: <b>{otp}</b></h2>"):
+        if send_email(email, "ObexAPI - OTP", f"<h2>OTP: <b>{otp}</b></h2>"):
             return jsonify({'message': 'OTP sent'})
         return jsonify({'error': 'Email failed'}), 500
 
@@ -215,7 +215,7 @@ def register_routes(app, mongo, config):
 
         html = f"""
         <div style="font-family:Arial;text-align:center;padding:40px;background:#f8fafc;">
-          <h1 style="color:#6366f1">MockAPI Pro</h1>
+          <h1 style="color:#6366f1">ObjexAPI</h1>
           <h2>Password Reset</h2>
           <a href="{reset_link}" style="background:#4f46e5;color:white;padding:16px 36px;border-radius:12px;text-decoration:none;font-weight:bold;">
             Reset Password Now
@@ -274,7 +274,7 @@ def register_routes(app, mongo, config):
         <script src="https://cdn.tailwindcss.com"></script></head>
         <body class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl shadow-2xl p-10 w-full max-w-md">
-                <h1 class="text-4xl font-bold text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-8">MockAPI Pro</h1>
+                <h1 class="text-4xl font-bold text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-8">ObjexAPI</h1>
                 <input type="password" id="newpass" placeholder="New Password" class="w-full px-5 py-4 border-2 rounded-xl mb-4 focus:border-purple-600 outline-none">
                 <input type="password" id="confirm" placeholder="Confirm Password" class="w-full px-5 py-4 border-2 rounded-xl mb-6 focus:border-purple-600 outline-none">
                 <button id="resetBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-lg">Update Password</button>
