@@ -12,7 +12,6 @@
     </div>
 
     <div class="p-6 space-y-5">
-      <!-- METHOD -->
       <div class="grid grid-cols-4 gap-2">
         <button onclick="setMethod('GET')"    class="method-btn bg-green-600 text-white text-sm font-bold py-3 rounded-lg ring-4 ring-white">GET</button>
         <button onclick="setMethod('POST')"   class="method-btn bg-blue-600 text-white text-sm font-bold py-3 rounded-lg">POST</button>
@@ -20,14 +19,12 @@
         <button onclick="setMethod('DELETE')" class="method-btn bg-red-600 text-white text-sm font-bold py-3 rounded-lg">DELETE</button>
       </div>
 
-      <!-- LANGUAGE -->
       <div class="grid grid-cols-3 gap-2">
         <button onclick="setLang('js')"     class="lang-btn bg-indigo-600 text-white text-sm font-bold py-2 rounded-lg border-2 border-indigo-600">JS</button>
         <button onclick="setLang('python')" class="lang-btn border-2 border-gray-300 text-sm font-bold py-2 rounded-lg">Python</button>
         <button onclick="setLang('curl')"   class="lang-btn border-2 border-gray-300 text-sm font-bold py-2 rounded-lg">cURL</button>
       </div>
 
-      <!-- CODE -->
       <div class="bg-gray-900 rounded-xl p-5 font-mono text-xs leading-tight overflow-x-auto max-h-96">
         <pre id="code-output" class="text-green-400"></pre>
       </div>
@@ -38,7 +35,7 @@
     </div>
   </div>
 
-  <!-- MAIN -->
+  <!-- MAIN CONTENT -->
   <div class="flex-1 p-8">
     <div class="max-w-5xl mx-auto">
 
@@ -83,7 +80,8 @@
           </div>
         </div>
 
-        <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl shadow-lg p-6 text-white">
+        <!-- SMART PLAN CARD -->
+        <div id="plan-card" class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl shadow-lg p-6 text-white">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-purple-100 text-sm font-medium">Current Plan</p>
@@ -99,18 +97,18 @@
         </div>
       </div>
 
-      <!-- PROJECTS -->
+      <!-- PROJECTS LIST -->
       <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
         <div class="flex justify-between items-center mb-8">
           <h2 class="text-2xl font-bold text-gray-800">Your Projects</h2>
-          <button onclick="openCreateModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-bold text-sm shadow-lg transition">
+          <button id="new-project-btn" onclick="openCreateModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-bold text-sm shadow-lg transition">
             + New Project
           </button>
         </div>
         <div id="projects-list" class="space-y-6">
           <div class="text-center py-16">
             <p class="text-lg text-gray-500">No projects yet</p>
-            <p class="text-sm text-gray-400 mt-2">Create your first ObjexAPI</p>
+            <p class="text-sm text-gray-400 mt-2">Create your first mock API</p>
           </div>
         </div>
       </div>
@@ -199,12 +197,27 @@ if response.status_code == 200:
   }
 };
 
-function setMethod(m) { currentMethod = m; document.querySelectorAll('.method-btn').forEach(b=>b.classList.remove('ring-4','ring-white')); event.target.classList.add('ring-4','ring-white'); updateCode(); }
-function setLang(l) { currentLang = l; document.querySelectorAll('.lang-btn').forEach(b=>{b.classList.remove('bg-indigo-600','text-white','border-indigo-600'); b.classList.add('border-2','border-gray-300');}); event.target.classList.add('bg-indigo-600','text-white','border-indigo-600'); event.target.classList.remove('border-gray-300'); updateCode(); }
+function setMethod(m) {
+  currentMethod = m;
+  document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('ring-4','ring-white'));
+  event.target.classList.add('ring-4','ring-white');
+  updateCode();
+}
+
+function setLang(l) {
+  currentLang = l;
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.remove('bg-indigo-600','text-white','border-indigo-600');
+    b.classList.add('border-2','border-gray-300');
+  });
+  event.target.classList.add('bg-indigo-600','text-white','border-indigo-600');
+  event.target.classList.remove('border-gray-300');
+  updateCode();
+}
 
 function updateCode() {
   const code = examples[currentMethod][currentLang] || '// Select method & language';
-  document.getElementById('code-output').innerHTML = code.split('\n').map((l,i) => 
+  document.getElementById('code-output').innerHTML = code.split('\n').map((l,i) =>
     `<span class="block"><span class="text-gray-500 select-none">${String(i+1).padStart(2,' ')} </span>${l||'&nbsp;'}</span>`
   ).join('');
 }
@@ -221,16 +234,35 @@ function showToast(msg, type='success') {
   setTimeout(() => t.classList.add('hidden'), 3000);
 }
 
-function openCreateModal() { document.getElementById('createModal').classList.remove('hidden'); document.getElementById('projectName').focus(); }
-function closeModal() { document.getElementById('createModal').classList.add('hidden'); document.getElementById('projectName').value = ''; }
+function openCreateModal() {
+  document.getElementById('createModal').classList.remove('hidden');
+  document.getElementById('projectName').focus();
+}
+
+function closeModal() {
+  document.getElementById('createModal').classList.add('hidden');
+  document.getElementById('projectName').value = '';
+}
 
 async function api(url, opts={}) {
-  const res = await fetch(url, {...opts, headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json',...opts.headers}});
-  if (res.status === 401) { localStorage.clear(); showToast("Session expired!", "error"); setTimeout(()=>location.replace('/login'),1500); }
-  if (!res.ok) throw await res.json().catch(()=>({error:"Server error"}));
+  const res = await fetch(url, {
+    ...opts,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...opts.headers
+    }
+  });
+  if (res.status === 401) {
+    localStorage.clear();
+    showToast("Session expired!", "error");
+    setTimeout(() => location.replace('/login'), 1500);
+  }
+  if (!res.ok) throw await res.json().catch(() => ({error: "Server error"}));
   return res.json();
 }
 
+// Load user
 api('/api/auth/me').then(u => {
   document.getElementById('user-name').textContent = u.name;
   document.querySelector('.w-11.h-11').textContent = u.name.charAt(0).toUpperCase();
@@ -239,48 +271,89 @@ api('/api/auth/me').then(u => {
 async function loadProjects() {
   try {
     const projects = await api('/api/projects');
-    document.getElementById('project-count').textContent = projects.length;
+    const count = projects.length;
+    document.getElementById('project-count').textContent = count;
+
+    // Smart Plan Card + Limit Detection
+    const planCard = document.getElementById('plan-card');
+    const newBtn = document.getElementById('new-project-btn');
+
+    if (count >= 2) {
+      planCard.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-yellow-200 text-sm font-bold">Limit Reached</p>
+            <p class="text-2xl font-bold mt-1">Upgrade Now</p>
+            <p class="text-xs opacity-90 mt-3">Contact for Pro Plan</p>
+            <a href="mailto:mamoon.developer@outlook.com" class="inline-block mt-4 bg-white bg-opacity-20 px-5 py-3 rounded-lg text-sm font-bold hover:bg-opacity-30 transition">
+              mamoon.developer@outlook.com
+            </a>
+          </div>
+          <div class="bg-white bg-opacity-20 p-4 rounded-xl">
+            <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 2L2 7l8 5 8-5-8-5zM2 17h16v-2H2v2z"/>
+            </svg>
+          </div>
+        </div>
+      `;
+      newBtn.disabled = true;
+      newBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      newBtn.onclick = () => showToast("Free plan limit reached!", "error");
+    }
+
     const list = document.getElementById('projects-list');
     if (!projects.length) {
-      list.innerHTML = `<div class="text-center py-16"><p class="text-lg text-gray-500">No projects yet</p><p class="text-sm text-gray-400 mt-2">Create your first ObjexAPI</p></div>`;
+      list.innerHTML = `<div class="text-center py-16"><p class="text-lg text-gray-500">No projects yet</p><p class="text-sm text-gray-400 mt-2">Create your first mock API</p></div>`;
       return;
     }
+
     list.innerHTML = projects.map(p => `
-      <div class="border border-gray-200 rounded-xl p-6 hover:border-indigo-500 transition">
-        <h3 class="text-xl font-bold">${p.name}</h3>
-        <code class="block bg-black text-green-400 p-3 rounded mt-3 text-xs break-all">${p.base_url}</code>
+      <div class="border border-gray-200 rounded-xl p-6 hover:border-indigo-500 transition bg-gray-50">
+        <h3 class="text-xl font-bold text-gray-800">${p.name}</h3>
+        <code class="block bg-black text-green-400 p-3 rounded mt-3 text-xs break-all font-mono">${p.base_url}</code>
         <div class="flex gap-3 mt-4">
-          <a href="/project/${p._id}" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold">Open Editor</a>
+          <a href="/project/${p._id}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition">Open Editor</a>
           <button onclick="deleteProject('${p._id}')" class="text-red-600 hover:text-red-800 text-sm font-bold">Delete</button>
         </div>
       </div>
     `).join('');
-  } catch (e) { showToast(e.error || "Failed", "error"); }
+
+  } catch (e) {
+    showToast(e.error || "Failed to load projects", "error");
+  }
 }
 
 async function createProject() {
   const name = document.getElementById('projectName').value.trim();
-  if (!name) return showToast("Name required!", "error");
+  if (!name) return showToast("Project name required!", "error");
+
   try {
-    await api('/api/projects', {method:'POST', body:JSON.stringify({name})});
-    showToast("Created!", "success");
+    await api('/api/projects', {method: 'POST', body: JSON.stringify({name})});
+    showToast("Project created!", "success");
     closeModal();
     loadProjects();
-  } catch (e) { showToast(e.limit_reached ? "Free plan: Max 2 projects" : e.error, "error"); }
+  } catch (e) {
+    showToast(e.limit_reached ? "Free plan: Max 2 projects!" : (e.error || "Failed"), "error");
+  }
 }
 
 async function deleteProject(id) {
-  if (!confirm("Delete permanently?")) return;
-  await api(`/api/projects/${id}`, {method:'DELETE'});
+  if (!confirm("Delete this project permanently?")) return;
+  await api(`/api/projects/${id}`, {method: 'DELETE'});
   showToast("Deleted!", "success");
   loadProjects();
 }
 
 function realLogout() {
-  fetch('/api/auth/logout', {method:'POST', headers:{'Authorization':`Bearer ${token}`}})
-    .finally(() => { localStorage.clear(); showToast("Logged out!"); setTimeout(()=>location.replace('/login'),800); });
+  fetch('/api/auth/logout', {method: 'POST', headers: {'Authorization': `Bearer ${token}`}})
+    .finally(() => {
+      localStorage.clear();
+      showToast("Logged out!", "success");
+      setTimeout(() => location.replace('/login'), 800);
+    });
 }
 
+// INIT
 updateCode();
 loadProjects();
 </script>
