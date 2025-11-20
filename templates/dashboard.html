@@ -7,32 +7,32 @@
   <!-- LEFT SIDEBAR -->
   <div class="w-96 bg-white shadow-2xl border-r border-gray-200 overflow-y-auto">
     <div class="p-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-      <h2 class="text-2xl font-bold">Request Examples</h2>
-      <p class="text-sm opacity-90 mt-1">Select method & language</p>
+      <h2 class="text-xl font-bold">Request Examples</h2>
+      <p class="text-xs opacity-90 mt-1">Select method & language</p>
     </div>
 
-    <div class="p-6 space-y-6">
+    <div class="p-6 space-y-5">
       <!-- METHOD -->
-      <div class="grid grid-cols-4 gap-3">
-        <button onclick="setMethod('GET')"    class="method-btn bg-green-600 text-white ring-4 ring-white" data-method="GET">GET</button>
-        <button onclick="setMethod('POST')"   class="method-btn bg-blue-600 text-white" data-method="POST">POST</button>
-        <button onclick="setMethod('PUT')"    class="method-btn bg-yellow-600 text-white" data-method="PUT">PUT</button>
-        <button onclick="setMethod('DELETE')" class="method-btn bg-red-600 text-white" data-method="DELETE">DELETE</button>
+      <div class="grid grid-cols-4 gap-2">
+        <button onclick="setMethod('GET')"    class="method-btn bg-green-600 text-white text-sm font-bold py-3 rounded-lg ring-4 ring-white">GET</button>
+        <button onclick="setMethod('POST')"   class="method-btn bg-blue-600 text-white text-sm font-bold py-3 rounded-lg">POST</button>
+        <button onclick="setMethod('PUT')"    class="method-btn bg-yellow-600 text-white text-sm font-bold py-3 rounded-lg">PUT</button>
+        <button onclick="setMethod('DELETE')" class="method-btn bg-red-600 text-white text-sm font-bold py-3 rounded-lg">DELETE</button>
       </div>
 
       <!-- LANGUAGE -->
-      <div class="grid grid-cols-3 gap-3">
-        <button onclick="setLang('js')"     class="lang-btn bg-indigo-600 text-white border-2 border-indigo-600" data-lang="js">JavaScript</button>
-        <button onclick="setLang('python')" class="lang-btn border-2 border-gray-300" data-lang="python">Python</button>
-        <button onclick="setLang('curl')"   class="lang-btn border-2 border-gray-300" data-lang="curl">cURL</button>
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="setLang('js')"     class="lang-btn bg-indigo-600 text-white text-sm font-bold py-2 rounded-lg border-2 border-indigo-600">JS</button>
+        <button onclick="setLang('python')" class="lang-btn border-2 border-gray-300 text-sm font-bold py-2 rounded-lg">Python</button>
+        <button onclick="setLang('curl')"   class="lang-btn border-2 border-gray-300 text-sm font-bold py-2 rounded-lg">cURL</button>
       </div>
 
       <!-- CODE -->
-      <div class="bg-gray-900 rounded-xl p-6 font-mono text-sm leading-relaxed overflow-x-auto">
+      <div class="bg-gray-900 rounded-xl p-5 font-mono text-xs leading-tight overflow-x-auto max-h-96">
         <pre id="code-output" class="text-green-400"></pre>
       </div>
 
-      <button onclick="copyCode()" class="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold transition">
+      <button onclick="copyCode()" class="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg font-bold text-sm transition">
         Copy Code
       </button>
     </div>
@@ -43,26 +43,24 @@
     <div class="max-w-5xl mx-auto">
 
       <!-- HEADER -->
-      <div class="flex justify-between items-center mb-12">
-        <div>
-          <h1 class="text-5xl font-bold text-gray-800 tracking-tight">ObjexAPI</h1>
-        </div>
+      <div class="flex justify-between items-center mb-10">
+        <h1 class="text-4xl font-bold text-gray-800">ObjexAPI</h1>
 
-        <div class="flex items-center gap-8">
-          <div class="flex items-center gap-4">
+        <div class="flex items-center gap-6">
+          <div class="flex items-center gap-3">
             <div class="text-right">
-              <p class="text-sm text-gray-500">Signed in as</p>
-              <p class="text-xl font-semibold text-gray-800" id="user-name">User</p>
+              <p class="text-xs text-gray-500">Signed in as</p>
+              <p class="text-base font-semibold text-gray-800" id="user-name">User</p>
             </div>
-            <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-xl">
+            <div class="w-11 h-11 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
               M
             </div>
           </div>
 
           <button onclick="realLogout()" 
-                  class="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-bold px-8 py-4 rounded-xl shadow-2xl transition transform hover:scale-105 flex items-center gap-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3olf 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                  class="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-bold px-6 py-3 rounded-lg shadow-lg transition flex items-center gap-2 text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
             Logout
           </button>
@@ -70,50 +68,49 @@
       </div>
 
       <!-- STATS -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-        <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 hover:shadow-2xl transition">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-gray-600 font-medium">Total Projects</p>
-              <p class="text-5xl font-bold text-indigo-600 mt-3" id="project-count">0</p>
+              <p class="text-gray-600 text-sm font-medium">Total Projects</p>
+              <p class="text-4xl font-bold text-indigo-600 mt-2" id="project-count">0</p>
             </div>
-            <div class="bg-indigo-100 p-5 rounded-2xl">
-              <svg class="w-12 h-12 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="bg-indigo-100 p-4 rounded-xl">
+              <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2m-8 6h8"/>
               </svg>
             </div>
           </div>
         </div>
 
-        <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl shadow-lg p-8 text-white relative overflow-hidden">
+        <div class="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl shadow-lg p-6 text-white">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-purple-100 font-medium">Current Plan</p>
-              <p class="text-4xl font-bold mt-2">Free Plan</p>
-              <p class="text-sm opacity-90 mt-3">Max 2 projects • Limited features</p>
+              <p class="text-purple-100 text-sm font-medium">Current Plan</p>
+              <p class="text-2xl font-bold mt-1">Free Plan</p>
+              <p class="text-xs opacity-90 mt-2">Max 2 projects</p>
             </div>
-            <div class="bg-white bg-opacity-20 p-5 rounded-2xl">
-              <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
+            <div class="bg-white bg-opacity-20 p-4 rounded-xl">
+              <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm4-1a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/>
               </svg>
             </div>
           </div>
-          <div class="absolute top-4 right-4 bg-white bg-opacity-20 px-4 py-2 rounded-full text-xs font-bold">Limited</div>
         </div>
       </div>
 
       <!-- PROJECTS -->
       <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
         <div class="flex justify-between items-center mb-8">
-          <h2 class="text-3xl font-bold text-gray-800">Your Projects</h2>
-          <button onclick="openCreateModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg transition transform hover:scale-105">
+          <h2 class="text-2xl font-bold text-gray-800">Your Projects</h2>
+          <button onclick="openCreateModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-bold text-sm shadow-lg transition">
             + New Project
           </button>
         </div>
         <div id="projects-list" class="space-y-6">
-          <div class="text-center py-20">
-            <p class="text-2xl text-gray-500">No projects yet</p>
-            <p class="text-gray-400 mt-3">Click "New Project" to create your first mock API</p>
+          <div class="text-center py-16">
+            <p class="text-lg text-gray-500">No projects yet</p>
+            <p class="text-sm text-gray-400 mt-2">Create your first mock API</p>
           </div>
         </div>
       </div>
@@ -121,19 +118,20 @@
   </div>
 </div>
 
-<!-- MODAL & TOAST -->
+<!-- MODAL -->
 <div id="createModal" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50">
-  <div class="bg-white rounded-3xl shadow-2xl p-10 w-full max-w-lg">
-    <h2 class="text-4xl font-bold text-center text-gray-800 mb-8">Create New Project</h2>
-    <input type="text" id="projectName" placeholder="Enter project name..." class="w-full px-8 py-5 border-2 border-gray-300 rounded-2xl focus:border-indigo-600 outline-none text-xl mb-8">
-    <div class="flex gap-6">
-      <button onclick="closeModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-5 rounded-2xl text-lg transition">Cancel</button>
-      <button onclick="createProject()" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-5 rounded-2xl text-lg shadow-lg transition">Create Project</button>
+  <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+    <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Create New Project</h2>
+    <input type="text" id="projectName" placeholder="Project name..." class="w-full px-5 py-4 border-2 border-gray-300 rounded-lg focus:border-indigo-600 outline-none text-base mb-6">
+    <div class="flex gap-4">
+      <button onclick="closeModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-lg transition">Cancel</button>
+      <button onclick="createProject()" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-lg transition">Create</button>
     </div>
   </div>
 </div>
 
-<div id="toast" class="fixed bottom-8 right-8 px-8 py-5 rounded-xl text-white font-bold hidden z-50 shadow-2xl"></div>
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-6 right-6 px-6 py-4 rounded-lg text-white font-bold hidden z-50 shadow-xl text-sm"></div>
 
 <script>
 const token = localStorage.getItem('token');
@@ -145,9 +143,8 @@ let currentLang = 'js';
 const examples = {
   GET: {
     js: `fetch('https://your-project.vercel.app/api/users')
-  .then(res => res.json())
-  .then(data => console.log(data))`,
-
+  .then(r => r.json())
+  .then(d => console.log(d))`,
     python: `import requests
 
 url = "https://your-project.vercel.app/api/users"
@@ -155,114 +152,73 @@ response = requests.get(url)
 
 for user in response.json():
     print(f"User: {user}")`,
-
     curl: `curl https://your-project.vercel.app/api/users`
   },
-
   POST: {
     js: `fetch('https://your-project.vercel.app/api/users', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ name: 'mamoon' })
-})
-.then(res => res.json())
-.then(data => console.log(data))`,
-
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({name: 'mamoon'})
+})`,
     python: `import requests
 
 url = "https://your-project.vercel.app/api/users"
-data = { "name": "mamoon" }
+data = {"name": "mamoon"}
 
 response = requests.post(url, json=data)
 print("Status:", response.status_code)
 print("Response:", response.json())`,
-
     curl: `curl -X POST https://your-project.vercel.app/api/users \\
   -H "Content-Type: application/json" \\
   -d '{"name":"mamoon"}'`
   },
-
   PUT: {
     js: `fetch('https://your-project.vercel.app/api/users/123', {
   method: 'PUT',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ name: 'mamoon updated' })
-})
-.then(res => res.json())
-.then(data => console.log("Updated:", data))`,
-
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({name: 'updated'})
+})`,
     python: `import requests
 
-user_id = "123"
-url = f"https://your-project.vercel.app/api/users/{user_id}"
-data = { "name": "mamoon updated" }
-
-response = requests.put(url, json=data)
-print("Status:", response.status_code)
+url = "https://your-project.vercel.app/api/users/123"
+response = requests.put(url, json={"name": "updated"})
 print("Updated:", response.json())`,
-
     curl: `curl -X PUT https://your-project.vercel.app/api/users/123 \\
-  -H "Content-Type: application/json" \\
-  -d '{"name":"mamoon updated"}'`
+  -d '{"name":"updated"}'`
   },
-
   DELETE: {
-    js: `fetch('https://your-project.vercel.app/api/users/123', {
-  method: 'DELETE'
-})
-.then(() => console.log('User deleted successfully!'))`,
-
+    js: `fetch('https://your-project.vercel.app/api/users/123', {method: 'DELETE'})`,
     python: `import requests
 
-user_id = "123"
-url = f"https://your-project.vercel.app/api/users/{user_id}"
-
+url = "https://your-project.vercel.app/api/users/123"
 response = requests.delete(url)
 print("Status:", response.status_code)
-
 if response.status_code == 200:
-    print(f"User {user_id} successfully deleted!")`,
-
+    print("User deleted!")`,
     curl: `curl -X DELETE https://your-project.vercel.app/api/users/123`
   }
 };
 
-function setMethod(m) {
-  currentMethod = m;
-  document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('ring-4','ring-white'));
-  event.target.classList.add('ring-4','ring-white');
-  updateCode();
-}
-
-function setLang(l) {
-  currentLang = l;
-  document.querySelectorAll('.lang-btn').forEach(b => {
-    b.classList.remove('bg-indigo-600','text-white','border-indigo-600');
-    b.classList.add('border-2','border-gray-300');
-  });
-  event.target.classList.add('bg-indigo-600','text-white','border-indigo-600');
-  event.target.classList.remove('border-gray-300');
-  updateCode();
-}
+function setMethod(m) { currentMethod = m; document.querySelectorAll('.method-btn').forEach(b=>b.classList.remove('ring-4','ring-white')); event.target.classList.add('ring-4','ring-white'); updateCode(); }
+function setLang(l) { currentLang = l; document.querySelectorAll('.lang-btn').forEach(b=>{b.classList.remove('bg-indigo-600','text-white','border-indigo-600'); b.classList.add('border-2','border-gray-300');}); event.target.classList.add('bg-indigo-600','text-white','border-indigo-600'); event.target.classList.remove('border-gray-300'); updateCode(); }
 
 function updateCode() {
   const code = examples[currentMethod][currentLang] || '// Select method & language';
-  const lines = code.split('\n');
-  document.getElementById('code-output').innerHTML = lines.map((l,i) => 
+  document.getElementById('code-output').innerHTML = code.split('\n').map((l,i) => 
     `<span class="block"><span class="text-gray-500 select-none">${String(i+1).padStart(2,' ')} </span>${l||'&nbsp;'}</span>`
   ).join('');
 }
 
 function copyCode() {
   navigator.clipboard.writeText(examples[currentMethod][currentLang] || '');
-  showToast("Copied to clipboard!", "success");
+  showToast("Copied!", "success");
 }
 
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = `fixed bottom-8 right-8 px-8 py-5 rounded-xl text-white font-bold block z-50 shadow-2xl ${type==='error'?'bg-red-600':'bg-green-600'}`;
-  setTimeout(() => t.classList.add('hidden'), 4000);
+  t.className = `fixed bottom-6 right-6 px-6 py-4 rounded-lg text-white font-bold block z-50 shadow-xl text-sm ${type==='error'?'bg-red-600':'bg-green-600'}`;
+  setTimeout(() => t.classList.add('hidden'), 3000);
 }
 
 function openCreateModal() { document.getElementById('createModal').classList.remove('hidden'); document.getElementById('projectName').focus(); }
@@ -277,7 +233,7 @@ async function api(url, opts={}) {
 
 api('/api/auth/me').then(u => {
   document.getElementById('user-name').textContent = u.name;
-  document.querySelector('.w-14.h-14').textContent = u.name.charAt(0).toUpperCase();
+  document.querySelector('.w-11.h-11').textContent = u.name.charAt(0).toUpperCase();
 });
 
 async function loadProjects() {
@@ -286,16 +242,16 @@ async function loadProjects() {
     document.getElementById('project-count').textContent = projects.length;
     const list = document.getElementById('projects-list');
     if (!projects.length) {
-      list.innerHTML = `<div class="text-center py-20"><p class="text-2xl text-gray-500">No projects yet</p><p class="text-gray-400 mt-3">Create your first mock API!</p></div>`;
+      list.innerHTML = `<div class="text-center py-16"><p class="text-lg text-gray-500">No projects yet</p><p class="text-sm text-gray-400 mt-2">Create your first mock API</p></div>`;
       return;
     }
     list.innerHTML = projects.map(p => `
-      <div class="border border-gray-200 rounded-2xl p-8 hover:border-indigo-500 hover:shadow-xl transition bg-gradient-to-br from-indigo-50 to-purple-50">
-        <h3 class="text-2xl font-bold">${p.name}</h3>
-        <code class="block bg-black text-green-400 p-4 rounded-lg font-mono text-sm break-all my-4">${p.base_url}</code>
-        <div class="flex gap-4">
-          <a href="/project/${p._id}" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg">Open Editor</a>
-          <button onclick="deleteProject('${p._id}')" class="text-red-600 hover:text-red-800 font-bold px-6 py-4 border border-red-200 rounded-xl hover:bg-red-50">Delete</button>
+      <div class="border border-gray-200 rounded-xl p-6 hover:border-indigo-500 transition">
+        <h3 class="text-xl font-bold">${p.name}</h3>
+        <code class="block bg-black text-green-400 p-3 rounded mt-3 text-xs break-all">${p.base_url}</code>
+        <div class="flex gap-3 mt-4">
+          <a href="/project/${p._id}" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold">Open Editor</a>
+          <button onclick="deleteProject('${p._id}')" class="text-red-600 hover:text-red-800 text-sm font-bold">Delete</button>
         </div>
       </div>
     `).join('');
@@ -307,10 +263,10 @@ async function createProject() {
   if (!name) return showToast("Name required!", "error");
   try {
     await api('/api/projects', {method:'POST', body:JSON.stringify({name})});
-    showToast("Project created!", "success");
+    showToast("Created!", "success");
     closeModal();
     loadProjects();
-  } catch (e) { showToast(e.limit_reached ? "Free plan: Only 2 projects!" : e.error, "error"); }
+  } catch (e) { showToast(e.limit_reached ? "Free plan: Max 2 projects" : e.error, "error"); }
 }
 
 async function deleteProject(id) {
@@ -322,7 +278,7 @@ async function deleteProject(id) {
 
 function realLogout() {
   fetch('/api/auth/logout', {method:'POST', headers:{'Authorization':`Bearer ${token}`}})
-    .finally(() => { localStorage.clear(); showToast("Logged out!"); setTimeout(()=>location.replace('/login'),1000); });
+    .finally(() => { localStorage.clear(); showToast("Logged out!"); setTimeout(()=>location.replace('/login'),800); });
 }
 
 updateCode();
