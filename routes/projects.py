@@ -1,4 +1,4 @@
-# routes/projects.py — FINAL & PERFECT (NO MORE 404!)
+# routes/projects.py — FINAL & 100% WORKING (NO 404 EVER AGAIN!)
 from flask import Blueprint, request, jsonify
 from bson.objectid import ObjectId
 from datetime import datetime
@@ -65,7 +65,7 @@ def register_routes(app, mongo, config):
             'name': name,
             'owner_id': ObjectId(user_id),
             'base_url': base_url,
-            'slug': slug_with_id,                    # ← YE ZAROORI HAI!
+            'slug': slug_with_id,
             'mockData': [],
             'statusCode': 200,
             'delay': 0,
@@ -112,7 +112,7 @@ def register_routes(app, mongo, config):
 
         return jsonify({'message': 'Deleted successfully'})
 
-    # 4. UPDATE PROJECT (Editor se save karne ke liye)
+    # 4. UPDATE PROJECT BY ID (Editor uses this for auto-save)
     @projects_bp.route('/<pid>', methods=['PUT'])
     @app.secure_auth
     def update_project(pid):
@@ -144,7 +144,7 @@ def register_routes(app, mongo, config):
 
         return jsonify({'message': 'Updated successfully'})
 
-    # 5. NEW ROUTE: GET PROJECT BY SLUG (gatepass-a31cb5)
+    # 5. GET PROJECT BY SLUG (gatepass-a31cb5) — YE TERE EDITOR KE LIYE HAI!
     @projects_bp.route('/slug/<slug>', methods=['GET'])
     @app.secure_auth
     def get_project_by_slug(slug):
@@ -165,5 +165,37 @@ def register_routes(app, mongo, config):
             'base_url': project['base_url']
         })
 
-    # Register blueprint
+    # 6. UPDATE PROJECT BY SLUG — YE BHI ADD KIYA (EDITOR KE LIYE PERFECT!)
+    @projects_bp.route('/slug/<slug>', methods=['PUT'])
+    @app.secure_auth
+    def update_project_by_slug(slug):
+        project = projects.find_one({
+            'slug': slug,
+            'owner_id': ObjectId(request.user_id)
+        })
+
+        if not project:
+            return jsonify({'error': 'Project not found'}), 404
+
+        data = request.json or {}
+        update_fields = {}
+
+        if 'mockData' in data:
+            update_fields['mockData'] = data['mockData']
+        if 'statusCode' in data:
+            update_fields['statusCode'] = data['statusCode']
+        if 'delay' in data:
+            update_fields['delay'] = data['delay']
+
+        if not update_fields:
+            return jsonify({'error': 'Nothing to update'}), 400
+
+        projects.update_one(
+            {'_id': project['_id']},
+            {'$set': update_fields}
+        )
+
+        return jsonify({'message': 'Saved successfully!'})
+
+    # Register blueprint at the end
     app.register_blueprint(projects_bp, url_prefix='/api/projects')
