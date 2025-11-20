@@ -110,7 +110,7 @@
         <div id="projects-list" class="space-y-6">
           <div class="text-center py-16">
             <p class="text-lg text-gray-500">No projects yet</p>
-            <p class="text-sm text-gray-400 mt-2">Create your first mock API</p>
+            <p class="text-sm text-gray-400 mt-2">Create your first ObjexAPI</p>
           </div>
         </div>
       </div>
@@ -242,7 +242,7 @@ async function loadProjects() {
     document.getElementById('project-count').textContent = projects.length;
     const list = document.getElementById('projects-list');
     if (!projects.length) {
-      list.innerHTML = `<div class="text-center py-16"><p class="text-lg text-gray-500">No projects yet</p><p class="text-sm text-gray-400 mt-2">Create your first mock API</p></div>`;
+      list.innerHTML = `<div class="text-center py-16"><p class="text-lg text-gray-500">No projects yet</p><p class="text-sm text-gray-400 mt-2">Create your first ObjexAPI</p></div>`;
       return;
     }
     list.innerHTML = projects.map(p => `
