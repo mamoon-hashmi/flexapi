@@ -54,8 +54,8 @@ def dashboard():
     return render_template('dashboard.html')
 
 @app.route('/project/<project_id>')
-def project_detail(project_id):
-    return render_template('project_detail.html', project_id=project_id)
+def project_editor(project_id):
+    return render_template('project.html')  # ← Ye wahi Monaco Editor page hai!
 
 @app.errorhandler(404)
 def not_found(e):
