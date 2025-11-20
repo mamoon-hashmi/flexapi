@@ -3,51 +3,66 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-900 text-white flex flex-col">
-  <div class="w-1/2 border-r border-gray-700 flex flex-col">
-    <div class="bg-gray-800 p-5 border-b border-gray-700 flex justify-between items-center">
-      <h2 class="text-xl font-bold">Response JSON</h2>
-      <div class="flex gap-4 text-sm">
-        <div class="flex items-center gap-2">
-          <span>Status:</span>
-          <input type="number" id="status-code" value="200" class="w-20 bg-gray-700 rounded px-3 py-1"/>
-        </div>
-        <div class="flex items-center gap-2">
-          <span>Delay:</span>
-          <input type="number" id="delay" value="0" class="w-24 bg-gray-700 rounded px-3 py-1"/>
-          <span>ms</span>
-        </div>
-      </div>
+  <div class="bg-gray-800 border-b border-gray-700 px-8 py-4 flex justify-between items-center">
+    <h1 class="text-2xl font-bold">ObjexAPI Editor</h1>
+    <div class="flex items-center gap-4">
+      <span class="text-gray-400">Project:</span>
+      <span id="project-name" class="text-xl font-bold text-indigo-400">Loading...</span>
+      <a href="/dashboard" class="text-gray-300 hover:text-white">← Dashboard</a>
     </div>
-    <div id="editor" class="flex-1"></div>
   </div>
 
-  <div class="w-1/2 flex flex-col">
-    <div class="bg-gray-800 p-5 border-b border-gray-700 flex items-center gap-4">
-      <select id="method" class="bg-gray-700 px-4 py-2 rounded font-bold">
-        <option>GET</option>
-        <option>POST</option>
-        <option>PUT</option>
-        <option>DELETE</option>
-      </select>
-      <input type="text" id="endpoint" placeholder="/users" class="flex-1 bg-gray-700 px-4 py-2 rounded" value="/">
-      <button onclick="send()" class="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-2 rounded font-bold hover:shadow-lg transition">
-        Send
-      </button>
-    </div>
-
-    <div id="req-body" class="bg-gray-800 p-4 border-b border-gray-700 hidden">
-      <p class="text-sm text-gray-400 mb-2">Request Body (JSON)</p>
-      <textarea id="request-body" class="w-full h-32 bg-gray-900 text-green-400 p-4 rounded font-mono text-sm resize-none">{"name": "mamoon"}</textarea>
-    </div>
-
-    <div class="flex-1 p-6">
-      <div class="flex justify-between mb-4">
-        <h3 class="text-lg font-semibold">Response</h3>
-        <span id="status" class="px-4 py-1 rounded font-bold text-sm bg-gray-700">—</span>
+  <div class="flex-1 flex">
+    <!-- LEFT: EDITOR -->
+    <div class="w-1/2 border-r border-gray-700 flex flex-col">
+      <div class="bg-gray-800 px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+        <h2 class="font-semibold">Response JSON</h2>
+        <div class="flex gap-6 text-sm">
+          <div class="flex items-center gap-2">
+            <span>Status:</span>
+            <input type="number" id="status-code" value="200" class="w-20 bg-gray-700 rounded px-3 py-1"/>
+          </div>
+          <div class="flex items-center gap-2">
+            <span>Delay:</span>
+            <input type="number" id="delay" value="0" class="w-24 bg-gray-700 rounded px-3 py-1"/>
+            <span>ms</span>
+          </div>
+        </div>
       </div>
-      <pre id="response" class="bg-black p-6 rounded-lg text-green-400 font-mono text-sm overflow-auto h-96">
+      <div id="editor" class="flex-1"></div>
+    </div>
+
+    <!-- RIGHT: TESTER -->
+    <div class="w-1/2 flex flex-col">
+      <div class="bg-gray-800 px-6 py-4 border-b border-gray-700">
+        <div class="flex gap-4 items-center">
+          <select id="method" class="bg-gray-700 rounded px-4 py-2 font-bold">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>DELETE</option>
+          </select>
+          <input type="text" id="endpoint" placeholder="/users" class="flex-1 bg-gray-700 rounded px-4 py-2" value="/">
+          <button onclick="sendRequest()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-10 py-2 rounded font-bold">
+            Send
+          </button>
+        </div>
+      </div>
+
+      <div id="request-body-container" class="bg-gray-800 p-4 border-b border-gray-700 hidden">
+        <p class="text-sm text-gray-400 mb-2">Request Body (JSON)</p>
+        <textarea id="request-body" class="w-full h-32 bg-gray-900 text-green-400 rounded p-4 font-mono text-sm resize-none">{"name": "mamoon"}</textarea>
+      </div>
+
+      <div class="flex-1 p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold">Response</h3>
+          <span id="response-status" class="px-4 py-1 rounded font-bold text-sm bg-gray-700">—</span>
+        </div>
+        <pre id="response-output" class="bg-black rounded-lg p-6 font-mono text-sm text-green-400 overflow-x-auto min-h-48">
 Click Send to test
-      </pre>
+        </pre>
+      </div>
     </div>
   </div>
 </div>
@@ -56,62 +71,81 @@ Click Send to test
 <script>
 require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
 require(['vs/editor/editor.main'], function() {
+
+  // YE SIRF SLUG NIKALEGA → gatepass-a31cb5
   const slug = window.location.pathname.split('/').pop();
 
   const editor = monaco.editor.create(document.getElementById('editor'), {
-    value: `[]`,
+    value: `{"message": "Welcome to ObjexAPI!"}`,
     language: 'json',
     theme: 'vs-dark',
     automaticLayout: true,
     fontSize: 14,
-    wordWrap: 'on'
+    wordWrap: 'on',
+    minimap: { enabled: false }
   });
 
-  // Load project
-  fetch(`/api/projects/slug/${slug}`, {
-    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
-  })
-  .then(r => r.json())
-  .then(data => {
-    document.getElementById('project-name').textContent = data.name;
-    editor.setValue(JSON.stringify(data.mockData || [], null, 2));
-    document.getElementById('status-code').value = data.statusCode || 200;
-    document.getElementById('delay').value = data.delay || 0;
-  })
-  .catch(() => {
-    document.getElementById('project-name').textContent = 'Error loading project';
-  });
-
-  // Auto save
-  let timer;
-  editor.onDidChangeModelContent(() => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      fetch(`/api/projects/slug/${slug}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': 'Bearer ' + localStorage.getItem('token'),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          mockData: JSON.parse(editor.getValue()),
-          statusCode: +document.getElementById('status-code').value,
-          delay: +document.getElementById('delay').value
-        })
+  // 1. LOAD PROJECT USING ONLY SLUG
+  async function loadProject() {
+    try {
+      const res = await fetch(`/api/projects/slug/${slug}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
+
+      if (!res.ok) throw await res.json();
+      const project = await res.json();
+
+      document.getElementById('project-name').textContent = project.name;
+      editor.setValue(JSON.stringify(project.mockData || {}, null, 2));
+      document.getElementById('status-code').value = project.statusCode || 200;
+      document.getElementById('delay').value = project.delay || 0;
+
+      // Save slug for testing
+      window.currentSlug = slug;
+
+    } catch (e) {
+      document.getElementById('project-name').textContent = 'Not Found';
+      editor.setValue(`{\n  "error": "Project not found or unauthorized"\n}`);
+    }
+  }
+
+  // 2. AUTO SAVE — SIRF SLUG SE
+  let saveTimer;
+  editor.onDidChangeModelContent(() => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        const json = editor.getValue();
+        JSON.parse(json); // validate
+
+        await fetch(`/api/projects/slug/${slug}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            mockData: JSON.parse(json),
+            statusCode: +document.getElementById('status-code').value,
+            delay: +document.getElementById('delay').value
+          })
+        });
+      } catch (e) {}
     }, 1500);
   });
 
-  // Send request
-  window.send = async () => {
+  // 3. SEND REQUEST — TERA REAL URL
+  window.sendRequest = async function() {
     const method = document.getElementById('method').value;
     const endpoint = document.getElementById('endpoint').value || '/';
     const url = `https://objexapi.vercel.app/api/mock/${slug}${endpoint}`;
 
-    const body = ['POST','PUT'].includes(method) ? document.getElementById('request-body').value : null;
+    const body = ['POST','PUT'].includes(method) 
+      ? document.getElementById('request-body').value 
+      : null;
 
-    document.getElementById('status').textContent = 'Sending...';
-    document.getElementById('response').textContent = 'Loading...';
+    document.getElementById('response-status').textContent = 'Sending...';
+    document.getElementById('response-output').textContent = 'Loading...';
 
     try {
       const res = await fetch(url, {
@@ -121,22 +155,35 @@ require(['vs/editor/editor.main'], function() {
       });
 
       const text = await res.text();
-      let json = text;
-      try { json = JSON.parse(text); } catch {}
+      let data = text;
+      try { data = JSON.parse(text); } catch {}
 
-      document.getElementById('status').textContent = res.status + ' OK';
-      document.getElementById('status').className = 'px-4 py-1 rounded font-bold text-sm ' + (res.ok ? 'bg-green-600' : 'bg-red-600');
-      document.getElementById('response').textContent = typeof json === 'object' ? JSON.stringify(json, null, 2) : json;
-    } catch (e) {
-      document.getElementById('status').textContent = 'Failed';
-      document.getElementById('status').className = 'bg-red-600';
-      document.getElementById('response').textContent = e.message;
+      document.getElementById('response-status').textContent = res.status + ' ' + res.statusText;
+      document.getElementById('response-status').className = res.ok 
+        ? 'px-4 py-1 rounded font-bold text-sm bg-green-600' 
+        : 'px-4 py-1 rounded font-bold text-sm bg-red-600';
+
+      document.getElementById('response-output').textContent = 
+        typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
+
+    } catch (err) {
+      document.getElementById('response-status').textContent = 'Failed';
+      document.getElementById('response-status').className = 'bg-red-600';
+      document.getElementById('response-output').textContent = err.message;
     }
   };
 
-  document.getElementById('method').onchange = () => {
-    document.getElementById('req-body').classList.toggle('hidden', !['POST','PUT'].includes(document.getElementById('method').value));
+  // Show body only for POST/PUT
+  document.getElementById('method').onchange = function() {
+    document.getElementById('request-body-container').classList.toggle('hidden', !['POST','PUT'].includes(this.value));
   };
+
+  // Start
+  loadProject();
 });
 </script>
+
+<style>
+  #editor { width: 100%; height: 100%; }
+</style>
 {% endblock %}
