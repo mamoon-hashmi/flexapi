@@ -75,110 +75,94 @@ Waiting for request...
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
 <script>
 require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
-require(['vs/editor/editor.main'], function() {
+require(['vs/editor/editor.main'], async function() {
 
-  // CORRECT PROJECT ID FROM URL
+  // CORRECT WAY: Extract SLUG from URL like gatepass-a31cb5
   const path = window.location.pathname;
-  const projectId = path.startsWith('/project/') ? path.slice(9) : path.split('/').pop();
+  const slug = path.split('/').pop();  // ← ye "gatepass-a31cb5" dega
 
   const editor = monaco.editor.create(document.getElementById('editor'), {
-    value: `[\n  {\n    "id": 1,\n    "name": "mamoon",\n    "message": "Welcome to ObjexAPI!"\n  }\n]`,
+    value: `{"message": "Welcome to ObjexAPI!"}`,
     language: 'json',
     theme: 'vs-dark',
     automaticLayout: true,
     fontSize: 14,
-    minimap: { enabled: false },
-    scrollBeyondLastLine: false,
-    wordWrap: 'on',
-    formatOnPaste: true,
-    formatOnType: true
+    wordWrap: 'on'
   });
 
-  // LOAD PROJECT DATA
+  // LOAD PROJECT USING SLUG (not _id)
   async function loadProject() {
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
+      const res = await fetch(`/api/projects/slug/${slug}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
       if (!res.ok) throw await res.json();
-      const data = await res.json();
+      const project = await res.json();
 
-      document.getElementById('project-name').textContent = data.name || 'Untitled Project';
-      editor.setValue(JSON.stringify(data.mockData || [], null, 2));
-      document.getElementById('status-code').value = data.statusCode || 200;
-      document.getElementById('delay').value = data.delay || 0;
+      document.getElementById('project-name').textContent = project.name;
+      editor.setValue(JSON.stringify(project.mockData || {}, null, 2));
+      document.getElementById('status-code').value = project.statusCode || 200;
+      document.getElementById('delay').value = project.delay || 0;
 
-    } catch (err) {
-      console.error("Load error:", err);
-      document.getElementById('project-name').textContent = 'Failed to load';
+      // Save project._id for internal API calls
+      window.projectData = project;
+
+    } catch (e) {
+      document.getElementById('project-name').textContent = 'Project not found';
+      console.error(e);
     }
   }
 
-  // AUTO-SAVE
-  let saveTimeout;
+  // AUTO SAVE
+  let timer;
   editor.onDidChangeModelContent(() => {
-    clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(saveData, 1500);
-  });
-
-  async function saveData() {
-    try {
-      const value = editor.getValue();
-      JSON.parse(value); // Validate JSON
-
-      await fetch(`/api/projects/${projectId}`, {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (!window.projectData) return;
+      fetch(`/api/projects/${window.projectData._id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          mockData: JSON.parse(value),
-          statusCode: parseInt(document.getElementById('status-code').value) || 200,
-          delay: parseInt(document.getElementById('delay').value) || 0
+          mockData: JSON.parse(editor.getValue()),
+          statusCode: +document.getElementById('status-code').value,
+          delay: +document.getElementById('delay').value
         })
       });
-    } catch (e) {
-      // Invalid JSON → do nothing
-    }
-  }
+    }, 1500);
+  });
 
-  // SEND REQUEST — TERA REAL DEPLOYED URL
+  // SEND REQUEST — TERA REAL URL (slug use kar raha hai)
   window.sendRequest = async function() {
     const method = document.getElementById('method').value;
     const endpoint = document.getElementById('endpoint').value || '/';
-    const url = `https://objexapi.vercel.app/api/mock/${projectId}${endpoint}`;
+    const url = `https://objexapi.vercel.app/api/mock/${slug}${endpoint}`;
 
-    const body = ['POST', 'PUT'].includes(method) 
+    const body = ['POST','PUT'].includes(method) 
       ? document.getElementById('request-body').value 
       : null;
 
     document.getElementById('response-status').textContent = 'Sending...';
-    document.getElementById('response-status').className = 'px-4 py-1 rounded text-sm font-bold bg-yellow-600';
     document.getElementById('response-output').textContent = 'Please wait...';
 
     try {
       const res = await fetch(url, {
         method,
-        headers: body ? { 'Content-Type': 'application/json' } : {},
-        body: body || null
+        headers: body ? {'Content-Type': 'application/json'} : {},
+        body: body || undefined
       });
 
       const text = await res.text();
       let json;
       try { json = JSON.parse(text); } catch { json = text; }
 
-      document.getElementById('response-status').textContent = res.status + ' ' + res.statusText;
-      document.getElementById('response-status').className = res.ok 
-        ? 'px-4 py-1 rounded text-sm font-bold bg-green-600' 
-        : 'px-4 py-1 rounded text-sm font-bold bg-red-600';
-
-      document.getElementById('response-output').textContent = 
-        typeof json === 'object' ? JSON.stringify(json, null, 2) : json;
+      document.getElementById('response-status').textContent = res.status + ' OK';
+      document.getElementById('response-status').className = 'px-4 py-1 rounded text-sm font-bold bg-green-600';
+      document.getElementById('response-output').textContent = JSON.stringify(json, null, 2);
 
     } catch (err) {
       document.getElementById('response-status').textContent = 'Failed';
@@ -187,13 +171,10 @@ require(['vs/editor/editor.main'], function() {
     }
   };
 
-  // Show/Hide Request Body
   document.getElementById('method').addEventListener('change', function() {
-    const show = ['POST', 'PUT'].includes(this.value);
-    document.getElementById('request-body-container').classList.toggle('hidden', !show);
+    document.getElementById('request-body-container').classList.toggle('hidden', !['POST','PUT'].includes(this.value));
   });
 
-  // INIT
   loadProject();
 });
 </script>
