@@ -312,7 +312,7 @@ async function loadProjects() {
         <h3 class="text-xl font-bold text-gray-800">${p.name}</h3>
         <code class="block bg-black text-green-400 p-3 rounded mt-3 text-xs break-all font-mono">${p.base_url}</code>
         <div class="flex gap-3 mt-4">
-          <a href="/project/$${p.slug}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition">Open Editor</a>
+          <a href="/project/${p.slug}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition">Open Editor</a>
           <button onclick="deleteProject('${p._id}')" class="text-red-600 hover:text-red-800 text-sm font-bold">Delete</button>
         </div>
       </div>
