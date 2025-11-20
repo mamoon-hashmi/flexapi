@@ -1,4 +1,4 @@
-# routes/projects.py — 100% FIXED & FINAL (NO MORE 500 ERROR)
+# routes/projects.py — FINAL & PERFECT (NO MORE 404!)
 from flask import Blueprint, request, jsonify
 from bson.objectid import ObjectId
 from datetime import datetime
@@ -21,6 +21,7 @@ def register_routes(app, mongo, config):
             return [to_serializable(i) for i in obj]
         return obj
 
+    # 1. LIST ALL PROJECTS
     @projects_bp.route('/', methods=['GET'])
     @app.secure_auth
     def list_projects():
@@ -28,6 +29,7 @@ def register_routes(app, mongo, config):
         result = [to_serializable(p) for p in raw]
         return jsonify(result)
 
+    # 2. CREATE PROJECT
     @projects_bp.route('/', methods=['POST'])
     @app.secure_auth
     def create_project():
@@ -51,27 +53,28 @@ def register_routes(app, mongo, config):
         if not name:
             return jsonify({'error': 'Project name is required'}), 400
 
-        # Slug banao — bilkul safe
         slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
         if not slug:
             slug = 'project'
         unique_id = str(ObjectId())[-6:]
         slug_with_id = f"{slug}-{unique_id}"
 
-        # AB YE LINE HAMESHA DEFINE HOGI — KOI ERROR NAHI!
         base_url = f"https://objexapi.vercel.app/api/mock/{slug_with_id}"
 
         project_doc = {
             'name': name,
             'owner_id': ObjectId(user_id),
             'base_url': base_url,
+            'slug': slug_with_id,                    # ← YE ZAROORI HAI!
+            'mockData': [],
+            'statusCode': 200,
+            'delay': 0,
             'created_at': datetime.utcnow(),
             'endpoints': []
         }
 
         result = projects.insert_one(project_doc)
 
-        # Update user's current_projects count
         users.update_one(
             {'_id': ObjectId(user_id)},
             {'$set': {'current_projects': current_count + 1}}
@@ -81,9 +84,11 @@ def register_routes(app, mongo, config):
             '_id': str(result.inserted_id),
             'name': name,
             'base_url': base_url,
-            'message': 'Project created successfully!'
+            'slug': slug_with_id,
+            'message': 'Project created!'
         }), 201
 
+    # 3. DELETE PROJECT
     @projects_bp.route('/<pid>', methods=['DELETE'])
     @app.secure_auth
     def delete_project(pid):
@@ -98,13 +103,67 @@ def register_routes(app, mongo, config):
         })
 
         if result.deleted_count == 0:
-            return jsonify({'error': 'Project not found or unauthorized'}), 404
+            return jsonify({'error': 'Not found or unauthorized'}), 404
 
         users.update_one(
             {'_id': ObjectId(request.user_id)},
             {'$inc': {'current_projects': -1}}
         )
 
-        return jsonify({'message': 'Project deleted successfully'})
+        return jsonify({'message': 'Deleted successfully'})
 
+    # 4. UPDATE PROJECT (Editor se save karne ke liye)
+    @projects_bp.route('/<pid>', methods=['PUT'])
+    @app.secure_auth
+    def update_project(pid):
+        try:
+            ObjectId(pid)
+        except:
+            return jsonify({'error': 'Invalid ID'}), 400
+
+        data = request.json or {}
+        update_fields = {}
+
+        if 'mockData' in data:
+            update_fields['mockData'] = data['mockData']
+        if 'statusCode' in data:
+            update_fields['statusCode'] = data['statusCode']
+        if 'delay' in data:
+            update_fields['delay'] = data['delay']
+
+        if not update_fields:
+            return jsonify({'error': 'No data to update'}), 400
+
+        result = projects.update_one(
+            {'_id': ObjectId(pid), 'owner_id': ObjectId(request.user_id)},
+            {'$set': update_fields}
+        )
+
+        if result.modified_count == 0:
+            return jsonify({'error': 'Not found or no changes'}), 404
+
+        return jsonify({'message': 'Updated successfully'})
+
+    # 5. NEW ROUTE: GET PROJECT BY SLUG (gatepass-a31cb5)
+    @projects_bp.route('/slug/<slug>', methods=['GET'])
+    @app.secure_auth
+    def get_project_by_slug(slug):
+        project = projects.find_one({
+            'slug': slug,
+            'owner_id': ObjectId(request.user_id)
+        })
+
+        if not project:
+            return jsonify({'error': 'Project not found'}), 404
+
+        return jsonify({
+            '_id': str(project['_id']),
+            'name': project['name'],
+            'mockData': project.get('mockData', []),
+            'statusCode': project.get('statusCode', 200),
+            'delay': project.get('delay', 0),
+            'base_url': project['base_url']
+        })
+
+    # Register blueprint
     app.register_blueprint(projects_bp, url_prefix='/api/projects')
