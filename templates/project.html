@@ -20,15 +20,15 @@
   </div>
 
   <div class="flex-1 flex">
-    <!-- LEFT: EDITOR -->
+    <!-- LEFT: MONACO EDITOR -->
     <div class="w-1/2 border-r border-gray-700 flex flex-col">
       <div class="bg-gray-800 px-6 py-4 border-b border-gray-700 flex justify-between items-center">
         <h2 class="font-semibold">Response JSON (Live Edit)</h2>
-        <div class="flex gap-3 items-center">
-          <label class="text-sm">Status Code:</label>
-          <input type="number" id="status-code" value="200" class="w-20 bg-gray-700 rounded px-3 py-1 text-sm"/>
-          <label class="text-sm">Delay (ms):</label>
-          <input type="number" id="delay" value="0" min="0" max="10000" class="w-24 bg-gray-700 rounded px-3 py-1 text-sm"/>
+        <div class="flex gap-4 items-center text-sm">
+          <label>Status:</label>
+          <input type="number" id="status-code" value="200" class="w-20 bg-gray-700 rounded px-3 py-1"/>
+          <label>Delay (ms):</label>
+          <input type="number" id="delay" value="0" min="0" max="10000" class="w-24 bg-gray-700 rounded px-3 py-1"/>
         </div>
       </div>
       <div id="editor" class="flex-1"></div>
@@ -38,33 +38,32 @@
     <div class="w-1/2 flex flex-col">
       <div class="bg-gray-800 px-6 py-4 border-b border-gray-700">
         <div class="flex gap-4 items-center">
-          <select id="method" class="bg-gray-700 rounded px-4 py-2 font-bold">
+          <select id="method" class="bg-gray-700 rounded px-4 py-2 font-bold text-sm">
             <option value="GET" class="text-green-400">GET</option>
             <option value="POST" class="text-blue-400">POST</option>
             <option value="PUT" class="text-yellow-400">PUT</option>
             <option value="DELETE" class="text-red-400">DELETE</option>
           </select>
-          <input type="text" id="endpoint" placeholder="/users" class="flex-1 bg-gray-700 rounded px-4 py-2" value="/users"/>
-          <button onclick="sendRequest()" class="bg-indigo-600 hover:bg-indigo-700 px-8 py-2 rounded font-bold transition">
+          <input type="text" id="endpoint" placeholder="/users" class="flex-1 bg-gray-700 rounded px-4 py-2 text-sm" value="/"/>
+          <button onclick="sendRequest()" class="bg-indigo-600 hover:bg-indigo-700 px-8 py-2 rounded font-bold text-sm transition">
             Send
           </button>
         </div>
       </div>
 
-      <!-- REQUEST BODY (for POST/PUT) -->
-      <div id="request-body-container" class="hidden bg-gray-800 border-b border-gray-700 p-4">
+      <!-- REQUEST BODY -->
+      <div id="request-body-container" class="bg-gray-800 border-b border-gray-700 p-4 hidden">
         <p class="text-sm text-gray-400 mb-2">Request Body (JSON)</p>
-        <textarea id="request-body" class="w-full bg-gray-900 rounded p-4 font-mono text-sm h-32 resize-none" placeholder='{"name": "mamoon"}'></textarea>
+        <textarea id="request-body" class="w-full bg-gray-900 rounded p-4 font-mono text-sm h-32 resize-none text-green-400" placeholder='{"name": "mamoon"}'>{"name": "mamoon"}</textarea>
       </div>
 
       <!-- RESPONSE -->
-      -->
       <div class="flex-1 p-6 overflow-auto">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-semibold">Response</h3>
-          <span id="response-status" class="text-sm font-bold px-3 py-1 rounded bg-gray-800">—</span>
+          <span id="response-status" class="px-4 py-1 rounded text-sm font-bold bg-gray-800">—</span>
         </div>
-        <pre id="response-output" class="bg-black rounded-lg p-6 font-mono text-sm text-green-400 overflow-x-auto">
+        <pre id="response-output" class="bg-black rounded-lg p-6 font-mono text-sm text-green-400 overflow-x-auto min-h-48">
 Waiting for request...
         </pre>
       </div>
@@ -72,46 +71,65 @@ Waiting for request...
   </div>
 </div>
 
-<!-- MONACO EDITOR CDN -->
+<!-- MONACO EDITOR -->
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
 <script>
 require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
 require(['vs/editor/editor.main'], function() {
+
+  // CORRECT PROJECT ID FROM URL
+  const path = window.location.pathname;
+  const projectId = path.startsWith('/project/') ? path.slice(9) : path.split('/').pop();
+
   const editor = monaco.editor.create(document.getElementById('editor'), {
-    value: `[\n  {\n    "id": 1,\n    "name": "mamoon",\n    "email": "mamoon@example.com"\n  }\n]`,
+    value: `[\n  {\n    "id": 1,\n    "name": "mamoon",\n    "message": "Welcome to ObjexAPI!"\n  }\n]`,
     language: 'json',
     theme: 'vs-dark',
     automaticLayout: true,
     fontSize: 14,
     minimap: { enabled: false },
     scrollBeyondLastLine: false,
-    wordWrap: 'on'
+    wordWrap: 'on',
+    formatOnPaste: true,
+    formatOnType: true
   });
 
-  // Get project ID from URL
-  const projectId = window.location.pathname.split('/').pop();
-
-  // Load project data
+  // LOAD PROJECT DATA
   async function loadProject() {
-    const res = await fetch(`/api/projects/${projectId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    });
-    const data = await res.json();
-    document.getElementById('project-name').textContent = data.name;
-    editor.setValue(JSON.stringify(data.mockData || [], null, 2));
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) throw await res.json();
+      const data = await res.json();
+
+      document.getElementById('project-name').textContent = data.name || 'Untitled Project';
+      editor.setValue(JSON.stringify(data.mockData || [], null, 2));
+      document.getElementById('status-code').value = data.statusCode || 200;
+      document.getElementById('delay').value = data.delay || 0;
+
+    } catch (err) {
+      console.error("Load error:", err);
+      document.getElementById('project-name').textContent = 'Failed to load';
+    }
   }
 
-  // Save on change (auto-save every 2 sec)
-  let timeout;
+  // AUTO-SAVE
+  let saveTimeout;
   editor.onDidChangeModelContent(() => {
-    clearTimeout(timeout);
-    timeout = setTimeout(saveData, 2000);
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveData, 1500);
   });
 
   async function saveData() {
     try {
       const value = editor.getValue();
-      JSON.parse(value); // validate JSON
+      JSON.parse(value); // Validate JSON
+
       await fetch(`/api/projects/${projectId}`, {
         method: 'PUT',
         headers: {
@@ -120,33 +138,34 @@ require(['vs/editor/editor.main'], function() {
         },
         body: JSON.stringify({
           mockData: JSON.parse(value),
-          statusCode: parseInt(document.getElementById('status-code').value),
-          delay: parseInt(document.getElementById('delay').value)
+          statusCode: parseInt(document.getElementById('status-code').value) || 200,
+          delay: parseInt(document.getElementById('delay').value) || 0
         })
       });
     } catch (e) {
-      // invalid JSON - do nothing
+      // Invalid JSON → do nothing
     }
   }
 
-  // Send Test Request
+  // SEND REQUEST — TERA REAL DEPLOYED URL
   window.sendRequest = async function() {
     const method = document.getElementById('method').value;
-    const endpoint = document.getElementById('endpoint').value;
-    const url = `https://objexapi-mamoon.vercel.app/api/mock/${projectId}${endpoint}`;
+    const endpoint = document.getElementById('endpoint').value || '/';
+    const url = `https://objexapi.vercel.app/api/mock/${projectId}${endpoint}`;
 
     const body = ['POST', 'PUT'].includes(method) 
       ? document.getElementById('request-body').value 
       : null;
 
     document.getElementById('response-status').textContent = 'Sending...';
-    document.getElementById('response-output').textContent = 'Loading...';
+    document.getElementById('response-status').className = 'px-4 py-1 rounded text-sm font-bold bg-yellow-600';
+    document.getElementById('response-output').textContent = 'Please wait...';
 
     try {
       const res = await fetch(url, {
         method,
-        headers: body ? {'Content-Type': 'application/json'} : {},
-        body: body ? body : null
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body: body || null
       });
 
       const text = await res.text();
@@ -154,23 +173,27 @@ require(['vs/editor/editor.main'], function() {
       try { json = JSON.parse(text); } catch { json = text; }
 
       document.getElementById('response-status').textContent = res.status + ' ' + res.statusText;
-      document.getElementById('response-status').className = res.ok ? 'text-green-400' : 'text-red-400';
+      document.getElementById('response-status').className = res.ok 
+        ? 'px-4 py-1 rounded text-sm font-bold bg-green-600' 
+        : 'px-4 py-1 rounded text-sm font-bold bg-red-600';
 
-      document.getElementById('response-output').textContent = JSON.stringify(json, null, 2);
+      document.getElementById('response-output').textContent = 
+        typeof json === 'object' ? JSON.stringify(json, null, 2) : json;
+
     } catch (err) {
-      document.getElementById('response-status').textContent = 'Error';
-      document.getElementById('response-status').className = 'text-red-400';
+      document.getElementById('response-status').textContent = 'Failed';
+      document.getElementById('response-status').className = 'px-4 py-1 rounded text-sm font-bold bg-red-600';
       document.getElementById('response-output').textContent = err.message;
     }
   };
 
-  // Show/hide request body
+  // Show/Hide Request Body
   document.getElementById('method').addEventListener('change', function() {
     const show = ['POST', 'PUT'].includes(this.value);
     document.getElementById('request-body-container').classList.toggle('hidden', !show);
   });
 
-  // Initial load
+  // INIT
   loadProject();
 });
 </script>
