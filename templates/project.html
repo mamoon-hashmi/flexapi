@@ -3,12 +3,26 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-900 text-white flex flex-col">
+  <!-- TOP BAR -->
   <div class="bg-gray-800 border-b border-gray-700 px-8 py-4 flex justify-between items-center">
-    <h1 class="text-2xl font-bold">ObjexAPI Editor</h1>
-    <div class="flex items-center gap-4">
-      <span class="text-gray-400">Project:</span>
-      <span id="project-name" class="text-xl font-bold text-indigo-400">Loading...</span>
-      <a href="/dashboard" class="text-gray-300 hover:text-white">← Dashboard</a>
+    <div class="flex items-center gap-6">
+      <h1 class="text-2xl font-bold">ObjexAPI Editor</h1>
+      <div class="flex items-center gap-3">
+        <span class="text-gray-400">Project:</span>
+        <span id="project-name" class="text-xl font-bold text-indigo-400">Loading...</span>
+      </div>
+    </div>
+    <a href="/dashboard" class="text-gray-300 hover:text-white text-sm">Dashboard</a>
+  </div>
+
+  <!-- FULL URL DISPLAY -->
+  <div class="bg-gray-950 border-b border-gray-700 px-8 py-3">
+    <div class="flex items-center gap-3">
+      <span class="text-gray-500 text-sm">Full Endpoint URL:</span>
+      <code id="full-url" class="bg-black text-green-400 px-4 py-2 rounded text-sm font-mono break-all">
+        Loading...
+      </code>
+      <button onclick="copyUrl()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded">Copy</button>
     </div>
   </div>
 
@@ -36,14 +50,14 @@
     <div class="w-1/2 flex flex-col">
       <div class="bg-gray-800 px-6 py-4 border-b border-gray-700">
         <div class="flex gap-4 items-center">
-          <select id="method" class="bg-gray-700 rounded px-4 py-2 font-bold">
+          <select id="method" class="bg-gray-700 rounded px-4 py-2 font-bold text-sm">
             <option>GET</option>
             <option>POST</option>
             <option>PUT</option>
             <option>DELETE</option>
           </select>
-          <input type="text" id="endpoint" placeholder="/users" class="flex-1 bg-gray-700 rounded px-4 py-2" value="/">
-          <button onclick="sendRequest()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-10 py-2 rounded font-bold">
+          <input type="text" id="endpoint" placeholder="/users/123" class="flex-1 bg-gray-700 rounded px-4 py-2 text-sm" value="/">
+          <button onclick="sendRequest()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-10 py-2 rounded font-bold text-sm">
             Send
           </button>
         </div>
@@ -60,7 +74,7 @@
           <span id="response-status" class="px-4 py-1 rounded font-bold text-sm bg-gray-700">—</span>
         </div>
         <pre id="response-output" class="bg-black rounded-lg p-6 font-mono text-sm text-green-400 overflow-x-auto min-h-48">
-Click Send to test
+Click Send to test your endpoint
         </pre>
       </div>
     </div>
@@ -72,11 +86,11 @@ Click Send to test
 require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' }});
 require(['vs/editor/editor.main'], function() {
 
-  // YE SIRF SLUG NIKALEGA → gatepass-a31cb5
   const slug = window.location.pathname.split('/').pop();
+  const baseMockUrl = `https://objexapi.vercel.app/api/mock/${slug}`;
 
   const editor = monaco.editor.create(document.getElementById('editor'), {
-    value: `{"message": "Welcome to ObjexAPI!"}`,
+    value: `[\n  {\n    "id": 1,\n    "name": "mamoon",\n    "role": "developer"\n  }\n]`,
     language: 'json',
     theme: 'vs-dark',
     automaticLayout: true,
@@ -85,39 +99,46 @@ require(['vs/editor/editor.main'], function() {
     minimap: { enabled: false }
   });
 
-  // 1. LOAD PROJECT USING ONLY SLUG
+  // Update full URL on endpoint change
+  function updateFullUrl() {
+    const endpoint = document.getElementById('endpoint').value || '/';
+    const full = baseMockUrl + endpoint;
+    document.getElementById('full-url').textContent = full;
+  }
+  document.getElementById('endpoint').addEventListener('input', updateFullUrl);
+
+  // Copy URL
+  window.copyUrl = () => {
+    navigator.clipboard.writeText(document.getElementById('full-url').textContent);
+    alert("URL copied!");
+  };
+
+  // Load project
   async function loadProject() {
     try {
       const res = await fetch(`/api/projects/slug/${slug}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
-
       if (!res.ok) throw await res.json();
       const project = await res.json();
 
       document.getElementById('project-name').textContent = project.name;
-      editor.setValue(JSON.stringify(project.mockData || {}, null, 2));
+      editor.setValue(JSON.stringify(project.mockData || [], null, 2));
       document.getElementById('status-code').value = project.statusCode || 200;
       document.getElementById('delay').value = project.delay || 0;
 
-      // Save slug for testing
-      window.currentSlug = slug;
-
+      updateFullUrl(); // Show full URL
     } catch (e) {
       document.getElementById('project-name').textContent = 'Not Found';
-      editor.setValue(`{\n  "error": "Project not found or unauthorized"\n}`);
     }
   }
 
-  // 2. AUTO SAVE — SIRF SLUG SE
+  // Auto save
   let saveTimer;
   editor.onDidChangeModelContent(() => {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
       try {
-        const json = editor.getValue();
-        JSON.parse(json); // validate
-
         await fetch(`/api/projects/slug/${slug}`, {
           method: 'PUT',
           headers: {
@@ -125,7 +146,7 @@ require(['vs/editor/editor.main'], function() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            mockData: JSON.parse(json),
+            mockData: JSON.parse(editor.getValue()),
             statusCode: +document.getElementById('status-code').value,
             delay: +document.getElementById('delay').value
           })
@@ -134,18 +155,18 @@ require(['vs/editor/editor.main'], function() {
     }, 1500);
   });
 
-  // 3. SEND REQUEST — TERA REAL URL
+  // SEND REQUEST — AB DELETE BHI CHALEGA ID KE SAATH!
   window.sendRequest = async function() {
     const method = document.getElementById('method').value;
     const endpoint = document.getElementById('endpoint').value || '/';
-    const url = `https://objexapi.vercel.app/api/mock/${slug}${endpoint}`;
+    const url = baseMockUrl + endpoint;
 
     const body = ['POST','PUT'].includes(method) 
       ? document.getElementById('request-body').value 
       : null;
 
     document.getElementById('response-status').textContent = 'Sending...';
-    document.getElementById('response-output').textContent = 'Loading...';
+    document.getElementById('response-output').textContent = 'Please wait...';
 
     try {
       const res = await fetch(url, {
@@ -176,10 +197,12 @@ require(['vs/editor/editor.main'], function() {
   // Show body only for POST/PUT
   document.getElementById('method').onchange = function() {
     document.getElementById('request-body-container').classList.toggle('hidden', !['POST','PUT'].includes(this.value));
+    updateFullUrl();
   };
 
   // Start
   loadProject();
+  updateFullUrl();
 });
 </script>
 
