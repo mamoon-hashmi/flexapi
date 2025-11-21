@@ -171,29 +171,29 @@ print("Response:", response.json())`,
   -d '{"name":"mamoon"}'`
   },
   PUT: {
-    js: `fetch('Your_Project_URL/123', {
+    js: `fetch('Your_Project_URL/Your_Data_ID', {
   method: 'PUT',
   headers: {'Content-Type': 'application/json'},
   body: JSON.stringify({name: 'updated'})
 })`,
     python: `import requests
 
-url = "Your_Project_URL/123"
+url = "Your_Project_URL/Your_Data_ID"
 response = requests.put(url, json={"name": "updated"})
 print("Updated:", response.json())`,
-    curl: `curl -X PUT Your_Project_URL/123 \\
+    curl: `curl -X PUT Your_Project_URL/Your_Data_ID \\
   -d '{"name":"updated"}'`
   },
   DELETE: {
-    js: `fetch('Your_Project_URL/123', {method: 'DELETE'})`,
+    js: `fetch('Your_Project_URL/Your_Data_ID', {method: 'DELETE'})`,
     python: `import requests
 
-url = "Your_Project_URL/123"
+url = "Your_Project_URL/Your_Data_ID"
 response = requests.delete(url)
 print("Status:", response.status_code)
 if response.status_code == 200:
     print("User deleted!")`,
-    curl: `curl -X DELETE Your_Project_URL/123`
+    curl: `curl -X DELETE Your_Project_URL/Your_Data_ID`
   }
 };
 
