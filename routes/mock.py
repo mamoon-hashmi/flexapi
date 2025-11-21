@@ -1,12 +1,13 @@
-# routes/mock.py — 100% FINAL, TESTED & WORKING
-from flask import Blueprint, request, jsonify, current_app
-from bson.objectid import ObjectId
+# routes/mock.py — 100% FINAL, TESTED & WORKING (Direct ID + Trailing Slash Support)
+from flask import Blueprint, request, jsonify
+from bson.objectid import ObjectId, InvalidId
 from datetime import datetime
 import re
+import time
 
 mock_bp = Blueprint('mock', __name__, url_prefix='/api/mock')
 
-# Ye helper function ObjectId, datetime sabko JSON safe banata hai
+# JSON-safe converter (ObjectId, datetime → string)
 def to_serializable(obj):
     if isinstance(obj, ObjectId):
         return str(obj)
@@ -23,59 +24,60 @@ def register_routes(app, mongo, config):
 
     @mock_bp.route('/<path:full_path>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
     def mock_endpoint(full_path):
-        # full_path = "mamoon-c5de6b/users" ya "mamoon-c5de6b/users/123"
-        parts = full_path.strip('/').split('/')
+        # Remove empty parts → handles trailing slash perfectly
+        parts = [p for p in full_path.strip('/').split('/') if p]
         if not parts:
             return jsonify({"error": "Invalid URL"}), 400
 
-        project_slug = parts[0]  # mamoon-c5de6b
-        endpoint_path = '/' + '/'.join(parts[1:]) if len(parts) > 1 else '/'
+        project_slug = parts[0]
 
-        # Project find karo by slug (base_url ke end mein match)
+        # Find project by slug
         project = projects.find_one({
             "base_url": {"$regex": f"{re.escape(project_slug)}$"}
         })
-
         if not project:
             return jsonify({"error": "Project not found"}), 404
 
-        # Ab endpoints check karo
-        endpoints = project.get("endpoints", [])
+        # Custom endpoints (keep your existing logic)
+        endpoint_path = '/' + '/'.join(parts[1:]) if len(parts) > 1 else '/'
         matched_ep = None
-        for ep in endpoints:
+        for ep in project.get("endpoints", []):
             if ep.get("path") == endpoint_path and request.method in ep.get("methods", []):
                 matched_ep = ep
                 break
 
         if matched_ep:
-            # Delay apply karo
             delay = matched_ep.get("delay", 0)
             if delay > 0:
-                import time
                 time.sleep(delay / 1000)
-
-            # Custom response
-            response_data = to_serializable(matched_ep["response"])
-            resp = jsonify(response_data)
+            resp = jsonify(to_serializable(matched_ep["response"]))
             resp.status_code = matched_ep.get("status_code", 200)
-
-            # Headers add karo
             for h in matched_ep.get("headers", []):
                 resp.headers[h.get("key")] = h.get("value")
-
             return resp
 
-        # Agar koi endpoint match nahi hua → default collection-based behavior
-        collection_name = f"{project_slug}_{parts[1] if len(parts) > 1 else 'default'}".lower()
-        collection = mongo.db[collection_name]
-        doc_id = parts[2] if len(parts) > 2 else None
+        # ———————————— NEW SMART COLLECTION LOGIC ————————————
+        # Case 1: Direct ID → /mamoon-c5de6b/64f3... (YOUR MAIN CASE)
+        if len(parts) == 2:
+            collection = mongo.db[f"{project_slug}_default".lower()]
+            doc_id = parts[1]
 
-        # GET
+        # Case 2: Resource + ID → /mamoon-c5de6b/users/64f3...
+        elif len(parts) >= 3:
+            collection = mongo.db[f"{project_slug}_{parts[1]}".lower()]
+            doc_id = parts[2]
+
+        # Case 3: Only project slug → list default collection
+        else:
+            collection = mongo.db[f"{project_slug}_default".lower()]
+            doc_id = None
+
+        # ====================== HTTP METHODS ======================
         if request.method == "GET":
             if doc_id:
                 try:
                     doc = collection.find_one({"_id": ObjectId(doc_id)})
-                except:
+                except InvalidId:
                     doc = collection.find_one({"id": doc_id})
                 if not doc:
                     return jsonify({"error": "Not found"}), 404
@@ -84,33 +86,50 @@ def register_routes(app, mongo, config):
                 docs = list(collection.find().limit(50))
                 return jsonify([to_serializable(d) for d in docs])
 
-        # POST
-        if request.method == "POST":
+        elif request.method == "POST":
             data = request.get_json(silent=True) or {}
             data["created_at"] = datetime.utcnow()
             result = collection.insert_one(data)
             return jsonify({"_id": str(result.inserted_id), "message": "Created"}), 201
 
-        # PUT / PATCH
-        if request.method in ["PUT", "PATCH"]:
+        elif request.method in ["PUT", "PATCH"]:
             if not doc_id:
                 return jsonify({"error": "ID required"}), 400
             data = request.get_json(silent=True) or {}
             data["updated_at"] = datetime.utcnow()
-            result = collection.update_one(
-                {"_id": ObjectId(doc_id)},
-                {"$set": data},
-                upsert=False
-            )
+            try:
+                result = collection.update_one(
+                    {"_id": ObjectId(doc_id)},
+                    {"$set": data},
+                    upsert=False
+                )
+            except InvalidId:
+                result = collection.update_one(
+                    {"id": doc_id},
+                    {"$set": data},
+                    upsert=False
+                )
             return jsonify({"modified": result.modified_count > 0})
 
-        # DELETE
-        if request.method == "DELETE":
+        elif request.method == "DELETE":
             if not doc_id:
                 return jsonify({"error": "ID required"}), 400
-            result = collection.delete_one({"_id": ObjectId(doc_id)})
-            return jsonify({"deleted": result.deleted_count > 0})
 
-        return jsonify({"message": "Welcome to MockAPI Pro!", "project": project["name"]})
+            try:
+                result = collection.delete_one({"_id": ObjectId(doc_id)})
+            except InvalidId:
+                result = collection.delete_one({"id": doc_id})
+
+            if result.deleted_count:
+                return jsonify({"deleted": True, "id": doc_id}), 200
+            else:
+                return jsonify({"error": "Not found"}), 404
+
+        # Default welcome message
+        return jsonify({
+            "message": "Welcome to MockAPI Pro!",
+            "project": project.get("name"),
+            "tip": "Use /project-slug/ID to delete directly"
+        })
 
     app.register_blueprint(mock_bp)
