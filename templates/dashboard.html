@@ -140,60 +140,60 @@ let currentLang = 'js';
 
 const examples = {
   GET: {
-    js: `fetch('https://your-project.vercel.app/api/users')
+    js: `fetch('Your_Project_URL')
   .then(r => r.json())
   .then(d => console.log(d))`,
     python: `import requests
 
-url = "https://your-project.vercel.app/api/users"
+url = "Your_Project_URL"
 response = requests.get(url)
 
 for user in response.json():
     print(f"User: {user}")`,
-    curl: `curl https://your-project.vercel.app/api/users`
+    curl: `curl Your_Project_URL`
   },
   POST: {
-    js: `fetch('https://your-project.vercel.app/api/users', {
+    js: `fetch('Your_Project_URL', {
   method: 'POST',
   headers: {'Content-Type': 'application/json'},
   body: JSON.stringify({name: 'mamoon'})
 })`,
     python: `import requests
 
-url = "https://your-project.vercel.app/api/users"
+url = "Your_Project_URL"
 data = {"name": "mamoon"}
 
 response = requests.post(url, json=data)
 print("Status:", response.status_code)
 print("Response:", response.json())`,
-    curl: `curl -X POST https://your-project.vercel.app/api/users \\
+    curl: `curl -X POST Your_Project_URL \\
   -H "Content-Type: application/json" \\
   -d '{"name":"mamoon"}'`
   },
   PUT: {
-    js: `fetch('https://your-project.vercel.app/api/users/123', {
+    js: `fetch('Your_Project_URL/123', {
   method: 'PUT',
   headers: {'Content-Type': 'application/json'},
   body: JSON.stringify({name: 'updated'})
 })`,
     python: `import requests
 
-url = "https://your-project.vercel.app/api/users/123"
+url = "Your_Project_URL/123"
 response = requests.put(url, json={"name": "updated"})
 print("Updated:", response.json())`,
-    curl: `curl -X PUT https://your-project.vercel.app/api/users/123 \\
+    curl: `curl -X PUT Your_Project_URL/123 \\
   -d '{"name":"updated"}'`
   },
   DELETE: {
-    js: `fetch('https://your-project.vercel.app/api/users/123', {method: 'DELETE'})`,
+    js: `fetch('Your_Project_URL/123', {method: 'DELETE'})`,
     python: `import requests
 
-url = "https://your-project.vercel.app/api/users/123"
+url = "Your_Project_URL/123"
 response = requests.delete(url)
 print("Status:", response.status_code)
 if response.status_code == 200:
     print("User deleted!")`,
-    curl: `curl -X DELETE https://your-project.vercel.app/api/users/123`
+    curl: `curl -X DELETE Your_Project_URL/123`
   }
 };
 
